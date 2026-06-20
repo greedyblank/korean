@@ -3009,6 +3009,7 @@ function buildTagRestructurePrompt(tagData) {
   return `你是韩语词汇语义分类专家。请根据以下标签和它们的例词，重组为一个清晰的层级标签体系。
 
 【当前所有标签（带样例）】
+共 ${tagData.length} 个标签，你的输出必须**逐条对应**，不能漏掉任何一个。
 ${tagList}
 ${currentGraph}
 【任务】
@@ -3023,13 +3024,15 @@ ${currentGraph}
 3. 跨域词不强行归一（如「烹饪·蒸」和「气象·闷热」可以共用「蒸」这个标签）
 4. 发现明显同义（如「烹饪」「料理」「做饭」）时，挑一个作 canonical，其余放 aliases
 5. 顶级标签控制在 5-8 个，深度一般 2-3 层
-6. 必须覆盖所有输入标签（如果某标签暂时找不到合适归类，可以让它作为某顶级标签的直接子节点）
+6. **必须覆盖所有 ${tagData.length} 个输入标签**——如果某标签确实难以归类，把它挂到一个名为「其他」的顶级桶下（parent="其他"），不要省略
+7. 所有出现在 parent 字段里的标签名，自身也必须在 tagGraph 里有完整条目（包括你新建的「其他」「行为」等中间层级）
+8. 看到像是随手记的标签（如「TODO」「重要」「待复习」），统一挂到「笔记」顶级桶下
 
 【输出要求】
 仅输出严格 JSON，无任何额外文字、markdown 代码块。格式：
 {"tagGraph":{"<标签名>":{"parent":"<父标签或null>","aliases":["<同义>"],"related":["<相关>"]}, ...}}
 
-所有出现在 parent/aliases/related 里的标签，自身也要在 tagGraph 里有条目。`;
+再次强调：输出条目数 >= ${tagData.length}（输入标签全要 + 你新建的中间层级），所有 parent 引用都要有对应条目。`;
 }
 
 async function restructureTagsWithAI() {
@@ -3066,36 +3069,96 @@ async function restructureTagsWithAI() {
   }
 }
 
-function showTagRestructurePreview(newGraph) {
+function showTagRestructurePreview(rawGraph) {
   const oldGraph = state.tagGraph || {};
-  const allKeys = new Set([...Object.keys(oldGraph), ...Object.keys(newGraph)]);
+
+  // ===== 应用前清洗 + 补全 =====
+  const newGraph = JSON.parse(JSON.stringify(rawGraph));  // deep clone
+  const inputTags = collectTagsForAI().map(t => t.tag);
+
+  // 1) 修复悬空 parent：AI 引用了某个 parent 但自身没条目 → 补条目作为顶级
+  const referencedParents = new Set();
+  Object.values(newGraph).forEach(node => {
+    if (node && node.parent) referencedParents.add(node.parent);
+  });
+  referencedParents.forEach(p => {
+    if (!newGraph[p]) {
+      newGraph[p] = { parent: null, aliases: [], related: [] };
+    }
+  });
+
+  // 2) 修复循环引用：A→B→A → 把 A 提升为顶级
+  const breakCycles = () => {
+    Object.entries(newGraph).forEach(([tag, node]) => {
+      const guard = new Set([tag]);
+      let cur = node && node.parent;
+      while (cur && !guard.has(cur)) {
+        guard.add(cur);
+        cur = newGraph[cur] && newGraph[cur].parent;
+      }
+      if (cur === tag) {
+        // 循环了，断开
+        newGraph[tag].parent = null;
+      }
+    });
+  };
+  breakCycles();
+
+  // 3) 漏掉的输入标签 → 挂到「其他」桶
+  const missing = inputTags.filter(t => !newGraph[t]);
+  if (missing.length > 0) {
+    if (!newGraph['其他']) {
+      newGraph['其他'] = { parent: null, aliases: [], related: [] };
+    }
+    missing.forEach(t => {
+      newGraph[t] = { parent: '其他', aliases: [], related: [] };
+    });
+  }
+
+  // 4) 也把 aliases 里的标签补条目（指向 canonical）
+  Object.entries(newGraph).forEach(([canonical, node]) => {
+    (node.aliases || []).forEach(a => {
+      if (!newGraph[a]) {
+        // alias 本身不重复占位，但留个标记防止下次又判定为 missing
+        newGraph[a] = { parent: canonical, aliases: [], related: [], _isAliasOf: canonical };
+      }
+    });
+  });
+
+  // 统计
   const newKeys = Object.keys(newGraph).filter(k => !oldGraph[k]);
   const removedKeys = Object.keys(oldGraph).filter(k => !newGraph[k]);
-
-  // 统计顶级标签和深度
   const roots = Object.entries(newGraph).filter(([_, n]) => !n.parent).map(([t]) => t);
+  const bucketed = missing.length;
+  const aliased = Object.values(newGraph).filter(n => n._isAliasOf).length;
 
-  // 构建预览 HTML
   let html = `
     <div class="text-sm text-slate-300 space-y-3">
       <div class="bg-[#34d399]/10 border border-[#34d399]/30 rounded-lg p-3 text-xs">
-        <div class="text-[#6ee7b7] font-semibold mb-1">AI 重组结果概览</div>
+        <div class="text-[#6ee7b7] font-semibold mb-1">AI 重组结果（已自动清洗）</div>
         <div>共 ${Object.keys(newGraph).length} 个标签 · ${roots.length} 个顶级：${roots.map(r => `<span class="text-[#7dd3fc]">${escapeHtml(r)}</span>`).join('、')}</div>
-        <div class="mt-1">${newKeys.length > 0 ? `<span class="text-[#34d399]">新增 ${newKeys.length}</span>` : ''}${removedKeys.length > 0 ? ` <span class="text-[#fda4af] ml-2">移除 ${removedKeys.length}</span>` : ''}</div>
+        <div class="mt-1 flex flex-wrap gap-2">
+          ${newKeys.length > 0 ? `<span class="text-[#34d399]">新增 ${newKeys.length}</span>` : ''}
+          ${removedKeys.length > 0 ? `<span class="text-[#fda4af]">移除 ${removedKeys.length}</span>` : ''}
+          ${bucketed > 0 ? `<span class="text-[#fbbf24]">AI 漏掉 ${bucketed} 个，已挂入「其他」</span>` : ''}
+          ${aliased > 0 ? `<span class="text-[#a78bfa]">${aliased} 个同义归并</span>` : ''}
+        </div>
       </div>
 
-      <div class="max-h-[50vh] overflow-y-auto border border-white/10 rounded-lg p-3 bg-black/20">
+      ${bucketed > 0 ? `
+        <div class="bg-[#fbbf24]/10 border border-[#fbbf24]/30 rounded-lg p-3 text-xs">
+          <div class="text-[#fcd34d] font-semibold mb-1">⚠ AI 漏处理的标签（${bucketed} 个）</div>
+          <div class="text-slate-400">已自动挂到「其他」桶下，应用后可手动调整：</div>
+          <div class="mt-1 text-slate-300">${missing.map(t => `<span class="inline-block px-1.5 py-0.5 mr-1 mb-1 rounded bg-white/5 text-[10px]">${escapeHtml(t)}</span>`).join('')}</div>
+        </div>
+      ` : ''}
+
+      <div class="max-h-[40vh] overflow-y-auto border border-white/10 rounded-lg p-3 bg-black/20">
         <pre class="text-[11px] text-slate-300 whitespace-pre-wrap font-mono">${escapeHtml(JSON.stringify(newGraph, null, 2))}</pre>
-      </div>
-
-      <div class="text-xs text-slate-500">
-        ${removedKeys.length > 0 ? `<div class="text-[#fda4af]">将移除：${removedKeys.map(k => escapeHtml(k)).join(', ')}</div>` : ''}
-        ${newKeys.length > 0 ? `<div class="text-[#34d399]">将新增：${newKeys.slice(0, 10).map(k => escapeHtml(k)).join(', ')}${newKeys.length > 10 ? ` 等 ${newKeys.length} 个` : ''}</div>` : ''}
       </div>
     </div>
   `;
 
-  // 用 confirm-style 弹窗：复用 toast 不行，这里直接用模态确认
   const overlay = document.createElement('div');
   overlay.className = 'fixed inset-0 z-[60] modal-backdrop flex items-center justify-center p-4';
   overlay.innerHTML = `
@@ -3107,6 +3170,7 @@ function showTagRestructurePreview(newGraph) {
       <div class="overflow-y-auto flex-1 mb-4">${html}</div>
       <div class="flex gap-2 justify-end shrink-0">
         <button onclick="this.closest('.fixed').remove()" class="px-4 py-2 text-sm rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300">取消</button>
+        <button onclick="rerunRestructure()" class="px-4 py-2 text-sm rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300" title="重新让 AI 跑一次">↻ 重跑</button>
         <button id="apply-restructure-btn" class="px-4 py-2 text-sm rounded-lg bg-[#34d399]/20 hover:bg-[#34d399]/30 border border-[#34d399]/40 text-[#6ee7b7]">应用</button>
       </div>
     </div>
@@ -3116,14 +3180,19 @@ function showTagRestructurePreview(newGraph) {
     state.tagGraph = newGraph;
     save();
     overlay.remove();
-    // 选第一个顶级标签
     const firstRoot = Object.entries(newGraph).find(([_, n]) => !n.parent);
     tagBrowserState.selectedTag = firstRoot ? firstRoot[0] : null;
     tagBrowserState.expanded = new Set(firstRoot ? [firstRoot[0]] : []);
     renderTagBrowser();
     renderTagCloud();
-    toast(`✓ 已应用 AI 重组（${Object.keys(newGraph).length} 标签）`, 'success');
+    toast(`✓ 已应用 AI 重组（${Object.keys(newGraph).length} 标签${bucketed > 0 ? `，${bucketed} 个挂入「其他」` : ''}）`, 'success');
   };
+}
+
+// 重跑：关闭预览再调用一次
+function rerunRestructure() {
+  document.querySelectorAll('.fixed.z-\\[60\\]').forEach(el => el.remove());
+  setTimeout(() => restructureTagsWithAI(), 50);
 }
 
 function applyCompletions(batch, results) {
