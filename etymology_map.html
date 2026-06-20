@@ -236,6 +236,9 @@
         <button onclick="openAddModal()" class="px-2.5 py-1.5 text-xs rounded-lg bg-[#38bdf8]/20 hover:bg-[#38bdf8]/30 border border-[#38bdf8]/40 text-[#7dd3fc] transition">
           + 新词条
         </button>
+        <button onclick="openAIAddModal()" class="px-2.5 py-1.5 text-xs rounded-lg bg-gradient-to-r from-[#a855f7]/25 to-[#ec4899]/25 hover:from-[#a855f7]/35 hover:to-[#ec4899]/35 border border-[#a855f7]/40 text-[#d8b4fe] transition" title="输入韩语或中文，AI 自动分析补全 (Shift+A)">
+          ✨ AI 新词条
+        </button>
         <button onclick="openPasteModal()" class="px-2.5 py-1.5 text-xs rounded-lg bg-[#f43f5e]/15 hover:bg-[#f43f5e]/25 border border-[#f43f5e]/30 text-[#fda4af] transition">
           ♨ 粘贴
         </button>
@@ -469,6 +472,32 @@
       <button onclick="previewPaste()" class="px-4 py-2 text-sm rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 transition">预览解析</button>
       <button onclick="confirmPaste()" class="px-4 py-2 text-sm rounded-lg bg-[#f43f5e] hover:bg-[#e11d48] text-white font-semibold transition">导入</button>
     </div>
+  </div>
+</div>
+
+<!-- ============================== AI Add Entry Modal ============================== -->
+<div id="ai-add-modal" class="hidden fixed inset-0 z-50 modal-backdrop flex items-center justify-center p-4">
+  <div class="glass rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+    <div class="flex items-center justify-between mb-3">
+      <h3 class="text-lg font-bold text-white">✨ AI 新词条</h3>
+      <button onclick="closeAIAddModal()" class="text-slate-400 hover:text-white">✕</button>
+    </div>
+
+    <p class="text-xs text-slate-400 mb-3 leading-relaxed">
+      输入<span class="text-[#7dd3fc]">韩语</span>或<span class="text-[#fbbf24]">中文</span>，AI 自动补全拉丁化、实际发音、音素分拆、释义、分析、词根与标签。回车即可触发。
+    </p>
+
+    <div class="flex gap-2 mb-3">
+      <input id="ai-add-input" type="text" placeholder="如：찌다 / 蒸 / 찌르다 / 刺"
+             onkeydown="if(event.key==='Enter'){event.preventDefault();runAINewEntry();}"
+             class="flex-1 rounded-lg px-3 py-2 text-sm bg-black/30 border border-white/15 text-white placeholder-slate-500 focus:outline-none focus:border-[#a855f7] focus:ring-2 focus:ring-[#a855f7]/30 transition">
+      <button id="ai-add-btn" onclick="runAINewEntry()" class="px-4 py-2 text-sm rounded-lg bg-gradient-to-r from-[#a855f7] to-[#ec4899] hover:opacity-90 text-white font-semibold transition whitespace-nowrap">
+        ✨ 分析
+      </button>
+    </div>
+
+    <div id="ai-add-status" class="hidden mb-3 text-xs"></div>
+    <div id="ai-add-preview" class="hidden"></div>
   </div>
 </div>
 
@@ -2014,6 +2043,216 @@ function openPasteModal() {
 }
 function closePasteModal() {
   document.getElementById('paste-modal').classList.add('hidden');
+}
+
+// =========================================================================
+// AI NEW ENTRY · 输入韩/中 → AI 分析 → 预览 → 应用
+// =========================================================================
+let _aiAddLastEntry = null;   // 缓存最近一次 AI 返回的 entry，供「编辑」按钮使用
+
+function openAIAddModal() {
+  document.getElementById('ai-add-modal').classList.remove('hidden');
+  document.getElementById('ai-add-input').value = '';
+  document.getElementById('ai-add-status').classList.add('hidden');
+  document.getElementById('ai-add-preview').classList.add('hidden');
+  _aiAddLastEntry = null;
+  setTimeout(() => document.getElementById('ai-add-input').focus(), 50);
+}
+
+function closeAIAddModal() {
+  document.getElementById('ai-add-modal').classList.add('hidden');
+}
+
+function _setStatus(msg, type = 'info') {
+  const el = document.getElementById('ai-add-status');
+  const colors = {
+    info:    'text-slate-300 bg-white/5 border-white/10',
+    success: 'text-[#6ee7b7] bg-[#34d399]/10 border-[#34d399]/30',
+    error:   'text-[#fda4af] bg-[#f43f5e]/10 border-[#f43f5e]/30',
+  };
+  el.className = `mb-3 text-xs px-3 py-2 rounded-lg border ${colors[type]}`;
+  el.textContent = msg;
+  el.classList.remove('hidden');
+}
+
+function buildAIEntryPrompt(input, existingTags) {
+  const tagHint = existingTags.length > 0
+    ? `\n【现有标签参考（尽量复用，最多挑 1-3 个；如确实没有合适的可新建）】\n${existingTags.slice(0, 80).join('、')}\n`
+    : '';
+  return `你是一名韩语词汇学专家，正在为韩语音韵词典补全词条。
+
+【任务】
+用户输入可能是<span style="color:#7dd3fc">韩文</span>或<span style="color:#fbbf24">中文</span>。请分析并补全一个韩语词典词条的所有字段。
+- 若输入是中文：翻译为最贴切的韩文词作为 hangul（优先用固有词/汉字词/常用词，避免生僻译法）。
+- 若输入是韩文：直接使用。
+
+【字段说明】
+- hangul: 韩文词条（不含空格；若为动词/形容词可用词干形式或字典形，以词典常用为准）
+- roman: 文化观光部 2000 式拉丁化 (Revised Romanization)，逐音节转写。如 찌다 → "jjida"，사랑 → "sarang"
+- pron: 实际发音（用方括号包围），如 [찌다]、[사랑]、[안녕히]
+- meaning: 中文释义；多义项用「；」分隔，每项简练（不超过 15 字）
+- decomp: 音素分拆，格式 "ㅈ+ㅣ+ㄷㅏ" 或 "ㅅ+ㅏ+ㄹ+ㅏㅇ"，把每个音节的初/中/终声拆开，多音节用空格连接
+- analysis: 一句话音韵/语义流转分析，不超过 40 字。如 "舌音 ㄹ 流动 + 喉音 ㅎ 气息 → 离开"
+- root: 词根（默认 hangul 的第一个音节），如 "찌다" → "찌"
+- tags: 1-3 个标签，描述语义/语法类别（动作/状态/物体/自然/身体/情感/抽象…）
+${tagHint}
+【输入】
+${input}
+
+【输出】
+严格输出下面的 JSON，不要任何前后多余文字、不要 markdown 围栏：
+{
+  "hangul": "",
+  "roman": "",
+  "pron": "",
+  "meaning": "",
+  "decomp": "",
+  "analysis": "",
+  "root": "",
+  "tags": []
+}`;
+}
+
+async function runAINewEntry() {
+  const input = document.getElementById('ai-add-input').value.trim();
+  if (!input) {
+    _setStatus('请先输入韩文或中文', 'error');
+    return;
+  }
+  if (!llmSettings.apiKey) {
+    _setStatus('请先在 ⚙ 设置里填写 API Key', 'error');
+    setTimeout(openSettingsModal, 400);
+    return;
+  }
+
+  const btn = document.getElementById('ai-add-btn');
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '⏳ AI 分析中...';
+  _setStatus('正在请求 ' + (llmSettings.model || 'LLM') + '…', 'info');
+  document.getElementById('ai-add-preview').classList.add('hidden');
+
+  try {
+    const existingTags = getAllTags();
+    const prompt = buildAIEntryPrompt(input, existingTags);
+    const resp = await callLLM(llmSettings, prompt, 1024);
+    const parsed = extractJSON(resp);
+    // 基本校验
+    if (!parsed.hangul || !parsed.meaning) {
+      throw new Error('AI 返回缺少 hangul 或 meaning 字段');
+    }
+    // 补默认值 + 客户端兜底
+    const entry = {
+      hangul: String(parsed.hangul).trim(),
+      roman:  String(parsed.roman || '').trim() || romanizeHangul(String(parsed.hangul).trim()),
+      pron:   String(parsed.pron || '').trim(),
+      meaning:String(parsed.meaning).trim(),
+      decomp: String(parsed.decomp || '').trim(),
+      analysis: String(parsed.analysis || '').trim(),
+      root:   String(parsed.root || '').trim() || getDefaultRoot(String(parsed.hangul).trim()),
+      tags:   Array.isArray(parsed.tags) ? parsed.tags.map(t => String(t).trim()).filter(Boolean).slice(0, 5) : [],
+    };
+    _aiAddLastEntry = entry;
+    _setStatus('✓ AI 分析完成，请确认后应用', 'success');
+    renderAIEntryPreview(entry);
+  } catch (e) {
+    _setStatus('AI 分析失败：' + e.message, 'error');
+    console.error(e);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+}
+
+function renderAIEntryPreview(entry) {
+  // 重复检测
+  const dup = state.entries.find(e => e.hangul === entry.hangul);
+  const dupWarning = dup
+    ? `<div class="text-xs text-[#fbbf24] mb-2 px-3 py-2 bg-[#fbbf24]/10 border border-[#fbbf24]/30 rounded-lg">⚠ 词典中已存在「${escapeHtml(entry.hangul)}」${dup.meaning ? '（' + escapeHtml(dup.meaning.split(/[;；]/)[0]) + '）' : ''}。仍可继续创建（会重复）。</div>`
+    : '';
+
+  const field = (label, val, color = '#cbd5e1') => val
+    ? `<div class="flex items-baseline gap-2 py-1"><span class="text-[10px] text-slate-500 min-w-[60px] uppercase tracking-wider">${label}</span><span style="color:${color}" class="text-sm break-all">${escapeHtml(val)}</span></div>`
+    : '';
+
+  const tagsHtml = entry.tags.length > 0
+    ? entry.tags.map(t => `<span class="inline-block text-[10px] px-2 py-0.5 rounded-full bg-[#34d399]/15 text-[#6ee7b7] border border-[#34d399]/30">${escapeHtml(t)}</span>`).join(' ')
+    : `<span class="text-xs text-slate-600 italic">无</span>`;
+
+  document.getElementById('ai-add-preview').innerHTML = `
+    ${dupWarning}
+    <div class="bg-white/[0.03] border border-white/10 rounded-xl p-4 fade-in">
+      <div class="flex items-baseline gap-2 mb-3 flex-wrap">
+        <span class="text-3xl font-bold text-white">${escapeHtml(entry.hangul)}</span>
+        ${entry.roman ? `<span class="text-xs text-slate-500 font-mono">/${escapeHtml(entry.roman)}/</span>` : ''}
+        ${entry.pron ? `<span class="text-xs text-[#fbbf24] font-mono">${escapeHtml(entry.pron)}</span>` : ''}
+      </div>
+      ${field('释义', entry.meaning, '#fde68a')}
+      ${field('音素分拆', entry.decomp, '#7dd3fc')}
+      ${field('分析', entry.analysis)}
+      ${field('词根', entry.root, '#a78bfa')}
+      <div class="flex items-baseline gap-2 py-1">
+        <span class="text-[10px] text-slate-500 min-w-[60px] uppercase tracking-wider">标签</span>
+        <span class="flex flex-wrap gap-1">${tagsHtml}</span>
+      </div>
+    </div>
+    <div class="flex justify-end gap-2 mt-4">
+      <button onclick="closeAIAddModal()" class="px-4 py-2 text-sm rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 transition">取消</button>
+      <button onclick="sendAIEntryToEditor()" class="px-4 py-2 text-sm rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 transition">✎ 在编辑器中修改</button>
+      <button onclick="applyAIEntry()" class="px-4 py-2 text-sm rounded-lg bg-gradient-to-r from-[#34d399] to-[#10b981] hover:opacity-90 text-white font-semibold transition">+ 应用并新建</button>
+    </div>
+  `;
+  document.getElementById('ai-add-preview').classList.remove('hidden');
+}
+
+function applyAIEntry() {
+  if (!_aiAddLastEntry) return;
+  const e = _aiAddLastEntry;
+  // 检查重复（仅警告，不阻断）
+  const data = {
+    id: uid(),
+    hangul: e.hangul,
+    roman: e.roman,
+    pron: e.pron,
+    meaning: e.meaning,
+    decomp: e.decomp,
+    analysis: e.analysis,
+    root: e.root,
+    tags: e.tags,
+    notes: '',
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  };
+  state.entries.push(data);
+  state.selectedEntryId = data.id;
+  const initIdx = getInitialIdx(e.hangul);
+  if (initIdx !== null) {
+    state.filter.initialIdx = initIdx;
+    state.filter.vowel = null;
+    state.filter.root = e.root;
+  }
+  save();
+  closeAIAddModal();
+  render();
+  toast(`✓ 已添加：${e.hangul} (${e.meaning.split(/[;；]/)[0]})`, 'success');
+}
+
+function sendAIEntryToEditor() {
+  if (!_aiAddLastEntry) return;
+  const e = _aiAddLastEntry;
+  // 直接调用现有 add-modal，预填字段
+  openAddModal();
+  document.getElementById('add-hangul').value = e.hangul;
+  document.getElementById('add-roman').value = e.roman;
+  document.getElementById('add-root').value = e.root;
+  document.getElementById('add-pron').value = e.pron;
+  document.getElementById('add-meaning').value = e.meaning;
+  document.getElementById('add-decomp').value = e.decomp;
+  document.getElementById('add-analysis').value = e.analysis;
+  document.getElementById('add-tags').value = (e.tags || []).join(' ');
+  document.getElementById('add-notes').value = '';
+  closeAIAddModal();
+  toast('已载入编辑器，可微调后保存', 'info');
 }
 
 // =========================================================================
