@@ -165,6 +165,23 @@
   .tts-btn:active, .tts-btn-lg:active {
     transform: scale(0.95);
   }
+  /* 标签 pill 高亮脉冲 */
+  @keyframes tagPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(52,211,153,0.6); }
+    50% { box-shadow: 0 0 0 8px rgba(52,211,153,0); }
+  }
+  .tag-pulse { animation: tagPulse 0.6s ease-out 2; }
+  /* 词条上的 tag pill 可点击 */
+  .tag-pill {
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .tag-pill:hover {
+    background: rgba(52,211,153,0.2);
+    color: #6ee7b7;
+    border-color: rgba(52,211,153,0.4);
+    transform: translateY(-1px);
+  }
     margin: 1px;
   }
   .toast {
@@ -221,6 +238,9 @@
         </button>
         <button onclick="openPasteModal()" class="px-2.5 py-1.5 text-xs rounded-lg bg-[#f43f5e]/15 hover:bg-[#f43f5e]/25 border border-[#f43f5e]/30 text-[#fda4af] transition">
           ♨ 粘贴
+        </button>
+        <button onclick="openTagBrowser()" class="px-2.5 py-1.5 text-xs rounded-lg bg-[#34d399]/15 hover:bg-[#34d399]/25 border border-[#34d399]/30 text-[#6ee7b7] transition" title="标签体系浏览器 (Shift+点击词条 pill 也能打开)">
+          🏷 标签
         </button>
         <button onclick="openAIModal()" id="ai-btn" class="px-2.5 py-1.5 text-xs rounded-lg bg-gradient-to-r from-[#a855f7]/25 to-[#ec4899]/25 hover:from-[#a855f7]/35 hover:to-[#ec4899]/35 border border-[#a855f7]/40 text-[#d8b4fe] transition">
           ✨ AI
@@ -321,6 +341,23 @@
     </summary>
     <div id="reference-panel" class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4 text-xs"></div>
   </details>
+</section>
+
+<!-- ============================== Tag Cloud (底部精简版) ============================== -->
+<section id="tag-cloud-section" class="max-w-[1600px] mx-auto px-4 mb-16">
+  <div class="glass rounded-2xl p-4">
+    <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+      <div class="flex items-baseline gap-2">
+        <h2 class="text-sm font-semibold text-slate-300">🏷 标签云</h2>
+        <span class="text-xs text-slate-500">单击展开 · Shift+点 pill 进全屏</span>
+      </div>
+      <button onclick="openTagBrowser()" class="text-xs text-[#34d399] hover:text-[#6ee7b7] transition px-2 py-0.5 rounded border border-[#34d399]/20 hover:border-[#34d399]/40 hover:bg-[#34d399]/10">
+        🏷 全屏浏览器 →
+      </button>
+    </div>
+    <div id="tag-cloud" class="flex flex-wrap gap-1.5"></div>
+    <div id="tag-cloud-detail" class="mt-4 hidden"></div>
+  </div>
 </section>
 
 <!-- ============================== Add/Edit Modal ============================== -->
@@ -426,6 +463,39 @@
       <button onclick="closePasteModal()" class="px-4 py-2 text-sm rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 transition">取消</button>
       <button onclick="previewPaste()" class="px-4 py-2 text-sm rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 transition">预览解析</button>
       <button onclick="confirmPaste()" class="px-4 py-2 text-sm rounded-lg bg-[#f43f5e] hover:bg-[#e11d48] text-white font-semibold transition">导入</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================== Tag Browser Modal ============================== -->
+<div id="tag-browser-modal" class="hidden fixed inset-0 z-50 modal-backdrop flex items-center justify-center p-4">
+  <div class="glass rounded-2xl w-full max-w-6xl h-[85vh] flex flex-col">
+    <!-- Header -->
+    <div class="flex items-center justify-between p-4 border-b border-white/10 shrink-0">
+      <div class="flex items-baseline gap-3 min-w-0">
+        <h3 class="text-lg font-bold text-white">🏷 标签浏览器</h3>
+        <span id="tag-browser-breadcrumb" class="text-xs text-slate-500 truncate"></span>
+      </div>
+      <div class="flex items-center gap-2 shrink-0">
+        <input id="tag-browser-search" type="text" placeholder="过滤标签..." oninput="onTagBrowserSearch(this.value)"
+               class="rounded-lg px-3 py-1.5 text-xs w-40">
+        <button onclick="restructureTagsWithAI()" class="px-2.5 py-1.5 text-xs rounded-lg bg-gradient-to-r from-[#a855f7]/25 to-[#ec4899]/25 hover:from-[#a855f7]/35 hover:to-[#ec4899]/35 border border-[#a855f7]/40 text-[#d8b4fe] transition" title="让 AI 根据现有词条重组标签树">
+          ✨ AI 重组
+        </button>
+        <button onclick="addNewTag()" class="px-2.5 py-1.5 text-xs rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 transition">
+          + 新标签
+        </button>
+        <button onclick="closeTagBrowser()" class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-white">✕</button>
+      </div>
+    </div>
+    <!-- Body -->
+    <div class="flex-1 flex min-h-0">
+      <!-- Tree pane -->
+      <div class="w-64 border-r border-white/10 overflow-y-auto p-3 shrink-0">
+        <div id="tag-tree" class="text-sm"></div>
+      </div>
+      <!-- Detail pane -->
+      <div class="flex-1 overflow-y-auto p-4" id="tag-detail"></div>
     </div>
   </div>
 </div>
@@ -677,12 +747,14 @@ const VOWEL_GROUPS = [
 ];
 
 const STORAGE_KEY = 'korean_etymology_map_v1';
+const TAGGRAPH_KEY = 'korean_etymology_taggraph_v1';
 
 // =========================================================================
 // STATE
 // =========================================================================
 let state = {
   entries: [],          // all word entries
+  tagGraph: {},         // 标签图 { tagId: {parent, aliases, related} }
   filter: {
     initialIdx: null,   // selected initial index (0-18), null = none
     vowel: null,        // when initialIdx === 11 (ㅇ), further filter by main vowel id ('a'|'eo'|'o'|'u'|'eu'|'i'|null)
@@ -699,6 +771,7 @@ let state = {
 function save() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state.entries));
+    localStorage.setItem(TAGGRAPH_KEY, JSON.stringify(state.tagGraph || {}));
   } catch(e) {
     toast('保存失败：' + e.message, 'error');
   }
@@ -707,10 +780,99 @@ function load() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) state.entries = JSON.parse(raw);
+    const tg = localStorage.getItem(TAGGRAPH_KEY);
+    state.tagGraph = tg ? JSON.parse(tg) : {};
   } catch(e) {
     console.error('Load failed:', e);
     state.entries = [];
+    state.tagGraph = {};
   }
+}
+
+// =========================================================================
+// TAG GRAPH · 标签图（带父链的多根树）
+//   tagGraph[tagId] = { parent: string|null, aliases: [string], related: [string] }
+//   词条仍然挂扁平 tags:[]，标签图只是关于标签的元数据
+// =========================================================================
+
+// 取得所有出现的标签（合并词条 tags + tagGraph 的 key）
+function getAllTags() {
+  const set = new Set();
+  state.entries.forEach(e => (e.tags || []).forEach(t => set.add(t)));
+  Object.keys(state.tagGraph || {}).forEach(t => set.add(t));
+  return [...set];
+}
+
+// 解析 alias：把 alias 反查到 canonical tag
+function resolveTag(tagId) {
+  if (!tagId) return null;
+  if (state.tagGraph[tagId]) return tagId;       // 自身就是 canonical
+  for (const [canonical, node] of Object.entries(state.tagGraph || {})) {
+    if ((node.aliases || []).includes(tagId)) return canonical;
+  }
+  return tagId;  // 未注册的标签，原样返回
+}
+
+// 取该标签（含 alias）下的所有词条
+function getTagWords(tagId) {
+  const canonical = resolveTag(tagId);
+  if (!canonical) return [];
+  const variants = new Set([canonical]);
+  const node = state.tagGraph[canonical];
+  if (node) (node.aliases || []).forEach(a => variants.add(a));
+  return state.entries.filter(e =>
+    (e.tags || []).some(t => variants.has(t))
+  );
+}
+
+// 取从根到当前标签的链路（面包屑）
+function getTagChain(tagId) {
+  const chain = [];
+  let cur = resolveTag(tagId);
+  const guard = new Set();
+  while (cur && !guard.has(cur)) {
+    guard.add(cur);
+    chain.unshift(cur);
+    const node = state.tagGraph[cur];
+    cur = node && node.parent ? resolveTag(node.parent) : null;
+  }
+  return chain;
+}
+
+// 直接子标签
+function getTagChildren(tagId) {
+  const canonical = resolveTag(tagId);
+  return getAllTags().filter(t => {
+    const node = state.tagGraph[t];
+    return node && node.parent && resolveTag(node.parent) === canonical;
+  });
+}
+
+// 同父的兄弟标签
+function getTagSiblings(tagId) {
+  const canonical = resolveTag(tagId);
+  const node = state.tagGraph[canonical];
+  const parent = node && node.parent ? resolveTag(node.parent) : null;
+  return getAllTags().filter(t => {
+    if (t === canonical) return false;
+    const tn = state.tagGraph[t];
+    const tp = tn && tn.parent ? resolveTag(tn.parent) : null;
+    return tp === parent;
+  });
+}
+
+// 顶级标签（无父）
+function getRootTags() {
+  const all = getAllTags();
+  return all.filter(t => {
+    const node = state.tagGraph[t];
+    return !node || !node.parent;
+  });
+}
+
+// 标签计数
+function getTagCount(tagId) {
+  return getTagWords(tagId).length;
 }
 
 // =========================================================================
@@ -1054,6 +1216,7 @@ function render() {
   renderRootsList();
   renderWordsList();
   renderDetail();
+  renderTagCloud();
 }
 
 function renderStats() {
@@ -1301,7 +1464,12 @@ function renderDetail() {
   }
 
   const senses = (e.meaning || '').split(/[;；]/).map(s => s.trim()).filter(Boolean);
-  const tagsHtml = (e.tags || []).map(t => `<span class="tag-pill">${escapeHtml(t)}</span>`).join('');
+  const tagsHtml = (e.tags || []).map(t => {
+    const chain = getTagChain(t);
+    const tip = chain.length > 1 ? chain.join(' › ') : `${t} · ${getTagCount(t)} 词条`;
+    const safe = escapeHtml(t).replace(/'/g, "\\'");
+    return `<span class="tag-pill" onclick="goToTag('${safe}', event)" onmouseenter="this.setAttribute('title','${escapeHtml(tip)} · 单击展开 / Shift+单击全屏')" data-tag-pill="${escapeHtml(t)}">${escapeHtml(t)}</span>`;
+  }).join('');
 
   panel.innerHTML = `
     <div class="fade-in">
@@ -1621,6 +1789,396 @@ function openPasteModal() {
 }
 function closePasteModal() {
   document.getElementById('paste-modal').classList.add('hidden');
+}
+
+// =========================================================================
+// TAG BROWSER · 全屏标签浏览器
+// =========================================================================
+let tagBrowserState = {
+  selectedTag: null,
+  expanded: new Set(),   // 展开的节点
+  search: '',
+};
+
+function openTagBrowser(focusTag) {
+  document.getElementById('tag-browser-modal').classList.remove('hidden');
+  if (focusTag) {
+    tagBrowserState.selectedTag = resolveTag(focusTag);
+    // 展开父链
+    getTagChain(focusTag).forEach(t => tagBrowserState.expanded.add(t));
+  }
+  renderTagBrowser();
+}
+
+function closeTagBrowser() {
+  document.getElementById('tag-browser-modal').classList.add('hidden');
+}
+
+function onTagBrowserSearch(v) {
+  tagBrowserState.search = (v || '').trim().toLowerCase();
+  renderTagTree();
+}
+
+function renderTagBrowser() {
+  renderTagTree();
+  renderTagDetail();
+  const bc = document.getElementById('tag-browser-breadcrumb');
+  if (tagBrowserState.selectedTag) {
+    bc.textContent = getTagChain(tagBrowserState.selectedTag).join(' › ');
+  } else {
+    bc.textContent = '';
+  }
+}
+
+// =========================================================================
+// TAG CLOUD · 底部精简标签云
+// =========================================================================
+let tagCloudState = { selectedTag: null };
+
+function renderTagCloud() {
+  const cloud = document.getElementById('tag-cloud');
+  const detail = document.getElementById('tag-cloud-detail');
+  if (!cloud) return;
+  const allTags = getAllTags().sort((a, b) => getTagCount(b) - getTagCount(a));
+  if (allTags.length === 0) {
+    cloud.innerHTML = `<span class="text-slate-500 text-sm italic">还没有标签 — 在词条编辑里添加，或点 [✨ AI 重组] 自动建系</span>`;
+    detail.classList.add('hidden');
+    return;
+  }
+  cloud.innerHTML = allTags.map(t => {
+    const count = getTagCount(t);
+    const isSelected = tagCloudState.selectedTag === t;
+    const hasParent = state.tagGraph[t] && state.tagGraph[t].parent;
+    const cls = [
+      'px-2 py-1 rounded-full text-xs border cursor-pointer transition',
+    ];
+    if (isSelected) cls.push('bg-[#34d399]/20 border-[#34d399]/50 text-[#6ee7b7]');
+    else if (hasParent) cls.push('bg-white/5 border-white/10 text-slate-300 hover:border-[#34d399]/40 hover:bg-[#34d399]/10');
+    else cls.push('bg-white/[0.03] border-white/10 text-slate-400 hover:border-[#34d399]/40 hover:bg-[#34d399]/10');
+    return `
+      <button class="${cls.join(' ')} tag-cloud-pill" data-tag="${escapeHtml(t)}" onclick="goToTag('${escapeHtml(t).replace(/'/g,"\\'")}', event)" title="${escapeHtml(getTagChain(t).join(' › '))} · ${count} 词条">
+        ${escapeHtml(t)} <span class="text-slate-500">${count}</span>
+      </button>
+    `;
+  }).join('');
+
+  // 展开选中标签的迷你词条列表
+  if (tagCloudState.selectedTag) {
+    const words = getTagWords(tagCloudState.selectedTag);
+    const chain = getTagChain(tagCloudState.selectedTag);
+    detail.innerHTML = `
+      <div class="border-t border-white/10 pt-3 fade-in">
+        <div class="flex items-baseline justify-between mb-2 flex-wrap gap-2">
+          <div class="text-xs text-slate-500">
+            <span class="text-slate-400">${chain.map((c, i) => `<span class="${i === chain.length-1 ? 'text-[#34d399] font-bold' : ''}">${escapeHtml(c)}</span>${i < chain.length-1 ? ' › ' : ''}`).join('')}</span>
+            <span class="ml-2">· ${words.length} 词条</span>
+          </div>
+          <button onclick="openTagBrowser('${escapeHtml(tagCloudState.selectedTag).replace(/'/g,"\\")}')" class="text-xs text-[#34d399] hover:text-[#6ee7b7] transition">在全屏中查看 →</button>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-1.5">
+          ${words.map(e => {
+            const senses = (e.meaning || '').split(/[;；]/)[0];
+            return `
+              <div onclick="selectEntryAndScroll('${e.id}')" class="cursor-pointer px-2.5 py-1.5 rounded-lg bg-white/[0.03] hover:bg-white/[0.08] border border-white/5 hover:border-[#34d399]/30 transition">
+                <div class="flex items-baseline gap-1.5">
+                  <span class="font-bold text-white text-base">${escapeHtml(e.hangul)}</span>
+                  ${e.roman ? `<span class="text-[10px] text-slate-500 font-mono">/${escapeHtml(e.roman)}/</span>` : ''}
+                </div>
+                <div class="text-xs text-slate-400 truncate">${escapeHtml(senses)}</div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `;
+    detail.classList.remove('hidden');
+  } else {
+    detail.classList.add('hidden');
+  }
+}
+
+function selectEntryAndScroll(id) {
+  const e = state.entries.find(x => x.id === id);
+  if (!e) return;
+  const initIdx = getInitialIdx(e.hangul);
+  if (initIdx !== null) {
+    state.filter.initialIdx = initIdx;
+    state.filter.vowel = null;
+    state.filter.root = e.root || getDefaultRoot(e.hangul);
+    state.selectedEntryId = id;
+  }
+  render();
+  setTimeout(() => {
+    const dp = document.getElementById('detail-panel');
+    if (dp) dp.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, 50);
+}
+
+// 单击 = 滚到底部 + 高亮 + 展开迷你列表；Shift+点击 = 全屏
+function goToTag(tag, event) {
+  if (event && event.shiftKey) {
+    openTagBrowser(tag);
+    return;
+  }
+  tagCloudState.selectedTag = (tagCloudState.selectedTag === tag) ? null : tag;
+  renderTagCloud();
+  if (tagCloudState.selectedTag) {
+    // 高亮闪烁
+    const pill = document.querySelector(`.tag-cloud-pill[data-tag="${CSS.escape(tag)}"]`);
+    if (pill) {
+      pill.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      pill.classList.add('tag-pulse');
+      setTimeout(() => pill.classList.remove('tag-pulse'), 1200);
+    }
+  }
+}
+
+function _tagMatchesSearch(tag) {
+  if (!tagBrowserState.search) return true;
+  return tag.toLowerCase().includes(tagBrowserState.search);
+}
+
+function renderTagTree() {
+  const container = document.getElementById('tag-tree');
+  const roots = getRootTags().sort((a, b) => getTagCount(b) - getTagCount(a));
+
+  const nodeHtml = (tag, depth) => {
+    const children = getTagChildren(tag);
+    const isExpanded = tagBrowserState.expanded.has(tag);
+    const isSelected = tagBrowserState.selectedTag === tag;
+    const count = getTagCount(tag);
+    const indent = depth * 16;
+    const arrow = children.length > 0
+      ? `<span class="cursor-pointer select-none inline-block w-4 text-slate-500 hover:text-slate-300" onclick="event.stopPropagation(); toggleTagExpand('${escapeHtml(tag).replace(/'/g,"\\'")}')">${isExpanded ? '▼' : '▶'}</span>`
+      : `<span class="inline-block w-4"></span>`;
+    const node = state.tagGraph[tag] || {};
+    const aliases = (node.aliases || []).length > 0
+      ? `<span class="text-[10px] text-slate-600">≡${node.aliases.length}</span>` : '';
+    const classes = [
+      'flex items-center gap-1.5 px-1.5 py-1 rounded cursor-pointer transition',
+    ];
+    if (isSelected) classes.push('bg-[#34d399]/15 text-[#6ee7b7] border border-[#34d399]/30');
+    else classes.push('hover:bg-white/5 text-slate-300 border border-transparent');
+    return `
+      <div class="${classes.join(' ')}" style="margin-left:${indent}px" onclick="selectTagInBrowser('${escapeHtml(tag).replace(/'/g,"\\'")}')">
+        ${arrow}
+        <span class="font-medium">${escapeHtml(tag)}</span>
+        ${aliases}
+        <span class="ml-auto text-[10px] text-slate-500">${count}</span>
+      </div>
+      ${isExpanded ? children.map(c => nodeHtml(c, depth + 1)).join('') : ''}
+    `;
+  };
+
+  // 未分组的标签（无 tagGraph 元数据且无父）单独显示
+  const orphanTags = roots.filter(t => !state.tagGraph[t]);
+  const groupedRoots = roots.filter(t => state.tagGraph[t]);
+  let html = groupedRoots.map(t => nodeHtml(t, 0)).join('');
+  if (orphanTags.length > 0) {
+    html += `<div class="text-[10px] text-slate-600 mt-2 px-1.5 uppercase tracking-wider">未分组 (${orphanTags.length})</div>`;
+    html += orphanTags.map(t => nodeHtml(t, 0)).join('');
+  }
+  if (roots.length === 0) {
+    html = `<div class="text-center text-slate-500 text-sm py-8">还没有标签<br><span class="text-xs">在词条编辑里添加标签，或点 [✨ AI 重组] 自动建系</span></div>`;
+  }
+  container.innerHTML = html;
+}
+
+function toggleTagExpand(tag) {
+  if (tagBrowserState.expanded.has(tag)) tagBrowserState.expanded.delete(tag);
+  else tagBrowserState.expanded.add(tag);
+  renderTagTree();
+}
+
+function selectTagInBrowser(tag) {
+  tagBrowserState.selectedTag = tag;
+  // 展开父链
+  getTagChain(tag).forEach(t => tagBrowserState.expanded.add(t));
+  renderTagBrowser();
+}
+
+function renderTagDetail() {
+  const panel = document.getElementById('tag-detail');
+  const tag = tagBrowserState.selectedTag;
+  if (!tag) {
+    panel.innerHTML = `
+      <div class="text-center text-slate-500 py-16">
+        <div class="text-5xl mb-3 opacity-30">🏷</div>
+        <p>从左侧选择一个标签</p>
+        <p class="text-xs mt-2">或点 <span class="text-[#d8b4fe]">✨ AI 重组</span> 自动生成层级结构</p>
+      </div>
+    `;
+    return;
+  }
+
+  const chain = getTagChain(tag);
+  const parent = chain.length >= 2 ? chain[chain.length - 2] : null;
+  const siblings = getTagSiblings(tag);
+  const children = getTagChildren(tag);
+  const node = state.tagGraph[tag] || {};
+  const aliases = node.aliases || [];
+  const related = node.related || [];
+  const words = getTagWords(tag);
+
+  const pillBtn = (t, color) => `
+    <button onclick="selectTagInBrowser('${escapeHtml(t).replace(/'/g,"\\'")}')" class="px-2 py-0.5 rounded text-xs border transition hover:bg-white/10" style="color:${color};border-color:${color}40;background:${color}14">
+      ${escapeHtml(t)} <span class="text-slate-500">${getTagCount(t)}</span>
+    </button>
+  `;
+
+  panel.innerHTML = `
+    <div class="fade-in">
+      <!-- 当前标签 -->
+      <div class="flex items-baseline justify-between mb-3 gap-2 flex-wrap">
+        <div class="flex items-baseline gap-2 flex-wrap">
+          <h2 class="text-3xl font-bold text-white">${escapeHtml(tag)}</h2>
+          <span class="text-sm text-slate-500">${words.length} 词条</span>
+        </div>
+        <div class="flex gap-1">
+          <button onclick="editTag('${escapeHtml(tag).replace(/'/g,"\\'")}')" class="px-2.5 py-1 text-xs rounded bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300">✎ 编辑</button>
+          <button onclick="addWordToTag('${escapeHtml(tag).replace(/'/g,"\\'")}')" class="px-2.5 py-1 text-xs rounded bg-[#34d399]/10 hover:bg-[#34d399]/20 border border-[#34d399]/30 text-[#6ee7b7]">+ 加词</button>
+          <button onclick="deleteTag('${escapeHtml(tag).replace(/'/g,"\\'")}')" class="px-2.5 py-1 text-xs rounded bg-[#f43f5e]/10 hover:bg-[#f43f5e]/20 border border-[#f43f5e]/30 text-[#fda4af]">✕ 删除</button>
+        </div>
+      </div>
+
+      <!-- 位置信息 -->
+      <div class="bg-white/[0.03] rounded-lg p-3 mb-4 border border-white/5 space-y-2 text-sm">
+        <div class="flex items-start gap-2 flex-wrap">
+          <span class="text-xs text-slate-500 min-w-[60px]">📍 位置</span>
+          <div class="flex items-center gap-1 flex-wrap text-xs">
+            ${chain.map((t, i) => `
+              <span class="${i === chain.length - 1 ? 'text-[#34d399] font-bold' : 'text-slate-400 hover:text-[#7dd3fc] cursor-pointer'}" onclick="selectTagInBrowser('${escapeHtml(t).replace(/'/g,"\\'")}')">${escapeHtml(t)}</span>
+              ${i < chain.length - 1 ? '<span class="text-slate-600">›</span>' : ''}
+            `).join('')}
+          </div>
+        </div>
+        ${parent ? `
+          <div class="flex items-start gap-2 flex-wrap">
+            <span class="text-xs text-slate-500 min-w-[60px]">↑ 父</span>
+            ${pillBtn(parent, '#38bdf8')}
+          </div>
+        ` : ''}
+        ${siblings.length > 0 ? `
+          <div class="flex items-start gap-2 flex-wrap">
+            <span class="text-xs text-slate-500 min-w-[60px]">↔ 兄弟</span>
+            ${siblings.map(s => pillBtn(s, '#fbbf24')).join(' ')}
+          </div>
+        ` : ''}
+        ${children.length > 0 ? `
+          <div class="flex items-start gap-2 flex-wrap">
+            <span class="text-xs text-slate-500 min-w-[60px]">↓ 子</span>
+            ${children.map(c => pillBtn(c, '#34d399')).join(' ')}
+          </div>
+        ` : ''}
+        ${aliases.length > 0 ? `
+          <div class="flex items-start gap-2 flex-wrap">
+            <span class="text-xs text-slate-500 min-w-[60px]">≡ 同义</span>
+            ${aliases.map(a => pillBtn(a, '#a78bfa')).join(' ')}
+          </div>
+        ` : ''}
+        ${related.length > 0 ? `
+          <div class="flex items-start gap-2 flex-wrap">
+            <span class="text-xs text-slate-500 min-w-[60px]">⇄ 相关</span>
+            ${related.map(r => pillBtn(r, '#f43f5e')).join(' ')}
+          </div>
+        ` : ''}
+      </div>
+
+      <!-- 词条列表 -->
+      <div>
+        <div class="text-xs text-slate-400 uppercase tracking-wider mb-2">📚 标签下的词条 (${words.length})</div>
+        ${words.length === 0
+          ? `<div class="text-slate-500 text-sm italic">暂无词条。点 [+ 加词] 给此标签添加。</div>`
+          : `<div class="space-y-1.5">
+              ${words.map(e => {
+                const senses = (e.meaning || '').split(/[;；]/)[0];
+                const tags = (e.tags || []).filter(t => t !== tag).slice(0, 4);
+                return `
+                  <div onclick="jumpFromTagBrowserToEntry('${e.id}')" class="cursor-pointer px-3 py-2 rounded-lg bg-white/[0.03] hover:bg-white/[0.08] border border-white/5 hover:border-[#34d399]/30 transition flex items-baseline gap-2 flex-wrap">
+                    <span class="text-lg font-bold text-white">${escapeHtml(e.hangul)}</span>
+                    ${e.roman ? `<span class="text-xs text-slate-500 font-mono">/${escapeHtml(e.roman)}/</span>` : ''}
+                    <span class="text-xs text-slate-400 truncate flex-1 min-w-0">${escapeHtml(senses)}</span>
+                    ${tags.map(t => `<span class="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-slate-400">${escapeHtml(t)}</span>`).join('')}
+                  </div>
+                `;
+              }).join('')}
+            </div>`
+        }
+      </div>
+    </div>
+  `;
+}
+
+function jumpFromTagBrowserToEntry(id) {
+  const e = state.entries.find(x => x.id === id);
+  if (!e) return;
+  // 跳到该词条的初声 + 词根 + 选中
+  const initIdx = getInitialIdx(e.hangul);
+  if (initIdx !== null) {
+    state.filter.initialIdx = initIdx;
+    state.filter.vowel = null;
+    state.filter.root = e.root || getDefaultRoot(e.hangul);
+    state.selectedEntryId = id;
+  }
+  closeTagBrowser();
+  render();
+  // 滚动到详情区
+  setTimeout(() => {
+    const dp = document.getElementById('detail-panel');
+    if (dp) dp.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, 100);
+}
+
+function addNewTag() {
+  const name = prompt('新标签名：');
+  if (!name || !name.trim()) return;
+  const t = name.trim();
+  if (state.tagGraph[t] || getAllTags().includes(t)) {
+    toast(`标签「${t}」已存在`, 'error');
+    return;
+  }
+  state.tagGraph[t] = { parent: null, aliases: [], related: [] };
+  save();
+  selectTagInBrowser(t);
+  toast(`已创建标签「${t}」`, 'success');
+}
+
+function editTag(tag) {
+  const node = state.tagGraph[tag] || { parent: null, aliases: [], related: [] };
+  const newParent = prompt(`父标签（留空=顶级）：`, node.parent || '');
+  const newAliases = prompt(`同义标签（逗号分隔，留空=无）：`, (node.aliases || []).join(','));
+  const newRelated = prompt(`相关标签（逗号分隔，留空=无）：`, (node.related || []).join(','));
+  if (newParent === null && newAliases === null && newRelated === null) return;
+  state.tagGraph[tag] = {
+    parent: (newParent || '').trim() || null,
+    aliases: (newAliases || '').split(/[,，]/).map(s => s.trim()).filter(Boolean),
+    related: (newRelated || '').split(/[,，]/).map(s => s.trim()).filter(Boolean),
+  };
+  save();
+  renderTagBrowser();
+  renderTagCloud();
+  toast(`标签「${tag}」已更新`, 'success');
+}
+
+function deleteTag(tag) {
+  if (!confirm(`删除标签「${tag}」？\n（只删元数据，词条上的标签字符串不会动）`)) return;
+  delete state.tagGraph[tag];
+  // 也从所有词条移除
+  state.entries.forEach(e => {
+    if (e.tags) e.tags = e.tags.filter(t => t !== tag);
+  });
+  save();
+  tagBrowserState.selectedTag = null;
+  render();
+  renderTagBrowser();
+  renderTagCloud();
+  toast(`已删除标签「${tag}」`, 'success');
+}
+
+function addWordToTag(tag) {
+  closeTagBrowser();
+  toast(`请在弹窗里把「${tag}」加到 Tags 字段`, 'info');
+  openAddModal();
 }
 
 function parseBulkText(text) {
@@ -2169,6 +2727,155 @@ function extractJSON(text) {
   const end = t.lastIndexOf('}');
   if (start < 0 || end < 0) throw new Error('响应中未找到 JSON');
   return JSON.parse(t.slice(start, end + 1));
+}
+
+// =========================================================================
+// AI TAG RESTRUCTURE · 让 LLM 根据现有词条重组标签树
+// =========================================================================
+function collectTagsForAI() {
+  const tagsWithSamples = {};
+  state.entries.forEach(e => {
+    (e.tags || []).forEach(t => {
+      if (!tagsWithSamples[t]) tagsWithSamples[t] = [];
+      const senses = (e.meaning || '').split(/[;；]/).map(s => s.trim()).filter(Boolean).join('/');
+      if (senses) tagsWithSamples[t].push(`${e.hangul}(${senses})`);
+    });
+  });
+  return Object.entries(tagsWithSamples).map(([tag, samples]) => ({
+    tag,
+    count: samples.length,
+    samples: samples.slice(0, 3),  // 每个标签最多 3 个样例
+  }));
+}
+
+function buildTagRestructurePrompt(tagData) {
+  const tagList = tagData.map((t, i) =>
+    `${i+1}. ${t.tag} (${t.count}词条) — 例: ${t.samples.join(' | ')}`
+  ).join('\n');
+
+  // 当前 tagGraph 也告诉 AI，让它基于现状优化
+  const currentGraph = Object.keys(state.tagGraph || {}).length > 0
+    ? `\n【当前已有的标签图（请在此基础上优化，不要推倒重来）】\n${JSON.stringify(state.tagGraph, null, 2)}\n`
+    : '';
+
+  return `你是韩语词汇语义分类专家。请根据以下标签和它们的例词，重组为一个清晰的层级标签体系。
+
+【当前所有标签（带样例）】
+${tagList}
+${currentGraph}
+【任务】
+为每个标签（包括你新创建的中间层级标签）生成结构化元数据：
+- parent: 父标签名（顶级标签用 null）
+- aliases: 同义/近义标签列表（用于合并重复标签）
+- related: 横向相关但非父子关系的标签
+
+【分类原则】
+1. 自由创建中间层级（如「行为」「自然」「抽象」「身体」「时间」「空间」「数量」「情感」等）
+2. 一个标签只能有一个 parent（避免循环）
+3. 跨域词不强行归一（如「烹饪·蒸」和「气象·闷热」可以共用「蒸」这个标签）
+4. 发现明显同义（如「烹饪」「料理」「做饭」）时，挑一个作 canonical，其余放 aliases
+5. 顶级标签控制在 5-8 个，深度一般 2-3 层
+6. 必须覆盖所有输入标签（如果某标签暂时找不到合适归类，可以让它作为某顶级标签的直接子节点）
+
+【输出要求】
+仅输出严格 JSON，无任何额外文字、markdown 代码块。格式：
+{"tagGraph":{"<标签名>":{"parent":"<父标签或null>","aliases":["<同义>"],"related":["<相关>"]}, ...}}
+
+所有出现在 parent/aliases/related 里的标签，自身也要在 tagGraph 里有条目。`;
+}
+
+async function restructureTagsWithAI() {
+  const tagData = collectTagsForAI();
+  if (tagData.length === 0) {
+    toast('还没有任何标签，先给词条加标签再让 AI 重组', 'error');
+    return;
+  }
+  if (!llmSettings.apiKey) {
+    toast('请先在 ⚙ 设置里填写 API Key', 'error');
+    openSettingsModal();
+    return;
+  }
+
+  if (!confirm(`将让 AI 重组 ${tagData.length} 个标签的结构。\n\n现有的标签图会被覆盖（如有），词条上的标签字符串不会动。\n\n继续？`)) return;
+
+  const btn = event?.target;
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ AI 思考中...'; }
+
+  try {
+    const prompt = buildTagRestructurePrompt(tagData);
+    const resp = await callLLM(llmSettings, prompt, 8192);
+    const parsed = extractJSON(resp);
+    if (!parsed.tagGraph || typeof parsed.tagGraph !== 'object') {
+      throw new Error('响应缺少 tagGraph 字段');
+    }
+    // 预览
+    showTagRestructurePreview(parsed.tagGraph);
+  } catch (e) {
+    toast('AI 重组失败：' + e.message, 'error');
+    console.error(e);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '✨ AI 重组'; }
+  }
+}
+
+function showTagRestructurePreview(newGraph) {
+  const oldGraph = state.tagGraph || {};
+  const allKeys = new Set([...Object.keys(oldGraph), ...Object.keys(newGraph)]);
+  const newKeys = Object.keys(newGraph).filter(k => !oldGraph[k]);
+  const removedKeys = Object.keys(oldGraph).filter(k => !newGraph[k]);
+
+  // 统计顶级标签和深度
+  const roots = Object.entries(newGraph).filter(([_, n]) => !n.parent).map(([t]) => t);
+
+  // 构建预览 HTML
+  let html = `
+    <div class="text-sm text-slate-300 space-y-3">
+      <div class="bg-[#34d399]/10 border border-[#34d399]/30 rounded-lg p-3 text-xs">
+        <div class="text-[#6ee7b7] font-semibold mb-1">AI 重组结果概览</div>
+        <div>共 ${Object.keys(newGraph).length} 个标签 · ${roots.length} 个顶级：${roots.map(r => `<span class="text-[#7dd3fc]">${escapeHtml(r)}</span>`).join('、')}</div>
+        <div class="mt-1">${newKeys.length > 0 ? `<span class="text-[#34d399]">新增 ${newKeys.length}</span>` : ''}${removedKeys.length > 0 ? ` <span class="text-[#fda4af] ml-2">移除 ${removedKeys.length}</span>` : ''}</div>
+      </div>
+
+      <div class="max-h-[50vh] overflow-y-auto border border-white/10 rounded-lg p-3 bg-black/20">
+        <pre class="text-[11px] text-slate-300 whitespace-pre-wrap font-mono">${escapeHtml(JSON.stringify(newGraph, null, 2))}</pre>
+      </div>
+
+      <div class="text-xs text-slate-500">
+        ${removedKeys.length > 0 ? `<div class="text-[#fda4af]">将移除：${removedKeys.map(k => escapeHtml(k)).join(', ')}</div>` : ''}
+        ${newKeys.length > 0 ? `<div class="text-[#34d399]">将新增：${newKeys.slice(0, 10).map(k => escapeHtml(k)).join(', ')}${newKeys.length > 10 ? ` 等 ${newKeys.length} 个` : ''}</div>` : ''}
+      </div>
+    </div>
+  `;
+
+  // 用 confirm-style 弹窗：复用 toast 不行，这里直接用模态确认
+  const overlay = document.createElement('div');
+  overlay.className = 'fixed inset-0 z-[60] modal-backdrop flex items-center justify-center p-4';
+  overlay.innerHTML = `
+    <div class="glass rounded-2xl p-5 max-w-2xl w-full max-h-[85vh] flex flex-col">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-lg font-bold text-white">✨ AI 标签重组预览</h3>
+        <button onclick="this.closest('.fixed').remove()" class="text-slate-400 hover:text-white">✕</button>
+      </div>
+      <div class="overflow-y-auto flex-1 mb-4">${html}</div>
+      <div class="flex gap-2 justify-end shrink-0">
+        <button onclick="this.closest('.fixed').remove()" class="px-4 py-2 text-sm rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300">取消</button>
+        <button id="apply-restructure-btn" class="px-4 py-2 text-sm rounded-lg bg-[#34d399]/20 hover:bg-[#34d399]/30 border border-[#34d399]/40 text-[#6ee7b7]">应用</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  overlay.querySelector('#apply-restructure-btn').onclick = () => {
+    state.tagGraph = newGraph;
+    save();
+    overlay.remove();
+    // 选第一个顶级标签
+    const firstRoot = Object.entries(newGraph).find(([_, n]) => !n.parent);
+    tagBrowserState.selectedTag = firstRoot ? firstRoot[0] : null;
+    tagBrowserState.expanded = new Set(firstRoot ? [firstRoot[0]] : []);
+    renderTagBrowser();
+    renderTagCloud();
+    toast(`✓ 已应用 AI 重组（${Object.keys(newGraph).length} 标签）`, 'success');
+  };
 }
 
 function applyCompletions(batch, results) {
