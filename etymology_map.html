@@ -129,6 +129,42 @@
     background: rgba(56,189,248,0.15);
     color: #7dd3fc;
     border: 1px solid rgba(56,189,248,0.25);
+  }
+  /* TTS ▶ 发音按钮 */
+  .tts-btn, .tts-btn-lg {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: rgba(52,211,153,0.12);
+    color: #6ee7b7;
+    border: 1px solid rgba(52,211,153,0.3);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+  .tts-btn {
+    width: 22px;
+    height: 22px;
+    font-size: 10px;
+    padding: 0;
+  }
+  .tts-btn-lg {
+    width: 36px;
+    height: 36px;
+    font-size: 14px;
+    padding: 0;
+  }
+  .tts-btn:hover, .tts-btn-lg:hover {
+    background: rgba(52,211,153,0.25);
+    border-color: rgba(52,211,153,0.6);
+    transform: scale(1.08);
+    box-shadow: 0 0 12px rgba(52,211,153,0.3);
+  }
+  .tts-btn:active, .tts-btn-lg:active {
+    transform: scale(0.95);
+  }
     margin: 1px;
   }
   .toast {
@@ -191,6 +227,9 @@
         </button>
         <button onclick="openSettingsModal()" class="w-8 h-8 flex items-center justify-center text-sm rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-400 hover:text-slate-200 transition" title="LLM 设置">
           ⚙
+        </button>
+        <button onclick="cycleTTSRateBtn()" id="tts-rate-btn" class="px-2 h-8 flex items-center justify-center text-xs rounded-lg bg-[#34d399]/10 hover:bg-[#34d399]/20 border border-[#34d399]/30 text-[#6ee7b7] transition font-mono" title="朗读速度（点击切换）">
+          <span id="tts-rate-label">1×</span>
         </button>
         <button onclick="exportJSON()" class="px-2.5 py-1.5 text-xs rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 transition">
           ↓
@@ -287,7 +326,10 @@
     <div class="space-y-3">
       <div class="grid grid-cols-2 gap-3">
         <div>
-          <label class="text-xs text-slate-400 block mb-1">한글 词形 *</label>
+          <label class="text-xs text-slate-400 block mb-1">
+            한글 词形 *
+            <button type="button" onclick="playKorean(document.getElementById('add-hangul').value)" class="tts-btn ml-1 align-middle" title="试听" aria-label="试听">▶</button>
+          </label>
           <input id="add-hangul" type="text" placeholder="例如 찌다" oninput="autofillFromHangul()"
                  class="w-full rounded-lg px-3 py-2 text-sm">
         </div>
@@ -815,6 +857,93 @@ function escapeHtml(s) {
 }
 
 // =========================================================================
+// TTS · 韩语发音（Web Speech API，零成本零配置）
+// =========================================================================
+let _koVoice = null;
+let _voicesReady = false;
+const TTS_RATES = [1, 0.75, 0.5];   // 循环：正常 → 慢 → 更慢
+let ttsRateIdx = 0;
+
+function _pickKoVoice() {
+  if (!('speechSynthesis' in window)) return null;
+  const voices = window.speechSynthesis.getVoices();
+  if (!voices || voices.length === 0) return null;
+  // 优先级：lang === 'ko-KR' 且为本地（响应快）→ 任何 ko 开头
+  const ko = voices.filter(v => v.lang && v.lang.toLowerCase().startsWith('ko'));
+  if (ko.length === 0) return null;
+  // 偏好：localService（离线可用）
+  const local = ko.find(v => v.localService);
+  return local || ko[0];
+}
+
+function _refreshKoVoice() {
+  const v = _pickKoVoice();
+  if (v) { _koVoice = v; _voicesReady = true; }
+}
+
+function ttsSupported() {
+  return typeof window !== 'undefined' && 'speechSynthesis' in window;
+}
+
+// 初始化：voices 在 Chrome 是异步加载
+if (ttsSupported()) {
+  _refreshKoVoice();
+  if (window.speechSynthesis.onvoiceschanged !== undefined) {
+    window.speechSynthesis.onvoiceschanged = _refreshKoVoice;
+  }
+  // 兜底再拉一次
+  setTimeout(_refreshKoVoice, 300);
+}
+
+function playKorean(text, opts = {}) {
+  if (!ttsSupported()) {
+    toast('当前浏览器不支持语音合成', 'error');
+    return;
+  }
+  if (!text) return;
+  // 截断到首个谚文串（避免把中文释义一并读出来）
+  const koMatch = text.match(/[\uac00-\ud7a3]+/);
+  const target = koMatch ? koMatch[0] : text;
+
+  window.speechSynthesis.cancel();  // 打断上一次
+  const u = new SpeechSynthesisUtterance(target);
+  u.lang = 'ko-KR';
+  if (_koVoice) u.voice = _koVoice;
+  u.rate = opts.rate || TTS_RATES[ttsRateIdx];
+  u.pitch = 1;
+  u.onerror = (ev) => {
+    if (ev.error !== 'interrupted' && ev.error !== 'canceled') {
+      toast('发音失败：' + (ev.error || '未知错误'), 'error');
+    }
+  };
+  // 若没装韩语语音包，给用户一次提示
+  if (!_koVoice && !_voicesReady) {
+    toast('未检测到韩语语音包，可能用默认声音朗读', 'info');
+  }
+  window.speechSynthesis.speak(u);
+}
+
+function stopAllTTS() {
+  if (ttsSupported()) window.speechSynthesis.cancel();
+}
+
+function cycleTTSRate() {
+  ttsRateIdx = (ttsRateIdx + 1) % TTS_RATES.length;
+  return TTS_RATES[ttsRateIdx];
+}
+
+function cycleTTSRateBtn() {
+  const r = cycleTTSRate();
+  const lbl = document.getElementById('tts-rate-label');
+  if (lbl) lbl.textContent = r + '×';
+  toast(`朗读速度：${r}×`, 'info');
+}
+
+function getTTSRate() {
+  return TTS_RATES[ttsRateIdx];
+}
+
+// =========================================================================
 // STATS
 // =========================================================================
 function getEntryCountsByInitial() {
@@ -1030,14 +1159,18 @@ function renderRootsList() {
   container.innerHTML = roots.map(([root, count]) => {
     const isActive = state.filter.root === root;
     const roman = romanizeHangul(root);
+    const safeRoot = escapeHtml(root).replace(/'/g, "\\'");
     return `
-      <div class="root-item ${isActive ? 'active' : ''} px-3 py-2 rounded-lg" onclick="selectRoot('${escapeHtml(root)}')">
-        <div class="flex items-baseline justify-between">
+      <div class="root-item ${isActive ? 'active' : ''} px-3 py-2 rounded-lg" onclick="selectRoot('${safeRoot}')">
+        <div class="flex items-baseline justify-between gap-2">
           <div class="flex items-baseline gap-2 min-w-0">
             <span class="text-xl font-bold text-white">${escapeHtml(root)}</span>
             ${roman ? `<span class="text-[10px] text-slate-500 font-mono">/${escapeHtml(roman)}/</span>` : ''}
           </div>
-          <span class="text-xs text-slate-500">${count}</span>
+          <div class="flex items-center gap-1 shrink-0">
+            <button onclick="event.stopPropagation(); playKorean('${safeRoot}')" class="tts-btn" title="朗读 ${escapeHtml(root)}" aria-label="朗读">▶</button>
+            <span class="text-xs text-slate-500">${count}</span>
+          </div>
         </div>
       </div>
     `;
@@ -1085,9 +1218,12 @@ function renderWordsList() {
     const tags = (e.tags || []).map(t => `<span class="tag-pill">${escapeHtml(t)}</span>`).join('');
     return `
       <div class="word-item ${isActive ? 'active' : ''} px-3 py-2.5 rounded-lg border border-white/5 fade-in" onclick="selectEntry('${e.id}')">
-        <div class="flex items-baseline justify-between mb-1">
-          <span class="text-xl font-bold text-white">${escapeHtml(e.hangul)}</span>
-          <span class="text-xs text-slate-500 font-mono">${escapeHtml(e.roman || '')}</span>
+        <div class="flex items-baseline justify-between mb-1 gap-2">
+          <div class="flex items-baseline gap-2 min-w-0">
+            <span class="text-xl font-bold text-white">${escapeHtml(e.hangul)}</span>
+            <span class="text-xs text-slate-500 font-mono">${escapeHtml(e.roman || '')}</span>
+          </div>
+          <button onclick="event.stopPropagation(); playKorean('${escapeHtml(e.hangul)}')" class="tts-btn" title="朗读 ${escapeHtml(e.hangul)}" aria-label="朗读">▶</button>
         </div>
         ${e.pron ? `<div class="text-[10px] text-[#fbbf24] font-mono mb-1">${escapeHtml(e.pron)}</div>` : ''}
         <div class="text-xs text-slate-300 space-y-0.5">
@@ -1129,12 +1265,13 @@ function renderDetail() {
   panel.innerHTML = `
     <div class="fade-in">
       <!-- Header -->
-      <div class="flex items-start justify-between mb-4">
+      <div class="flex items-start justify-between mb-4 gap-3">
         <div class="min-w-0">
           <div class="flex items-baseline gap-3 flex-wrap">
             <h2 class="text-5xl font-bold text-white">${escapeHtml(e.hangul)}</h2>
             ${e.pron ? `<span class="text-lg text-[#fbbf24] font-mono">${escapeHtml(e.pron)}</span>` : ''}
             ${e.roman ? `<span class="text-base text-slate-400 font-mono">/${escapeHtml(e.roman)}/</span>` : ''}
+            <button onclick="playKorean('${escapeHtml(e.hangul)}')" class="tts-btn-lg" title="朗读 ${escapeHtml(e.hangul)}" aria-label="朗读">▶</button>
           </div>
           <div class="flex items-center gap-2 mt-2 text-xs text-slate-500 flex-wrap">
             <span>词根 <span class="text-[#f43f5e] font-bold">${escapeHtml(e.root || getDefaultRoot(e.hangul))}</span></span>
@@ -2251,6 +2388,11 @@ maybeSeedExample();
 renderReferencePanel();
 render();
 updateAIButton();
+// 隐藏不支持的 TTS 控件
+if (!ttsSupported()) {
+  const r = document.getElementById('tts-rate-btn');
+  if (r) r.classList.add('hidden');
+}
 
 // Welcome toast
 setTimeout(() => {
