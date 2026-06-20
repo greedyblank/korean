@@ -596,6 +596,7 @@
           <option value="openai">OpenAI GPT</option>
           <option value="deepseek">DeepSeek</option>
           <option value="moonshot">Moonshot Kimi</option>
+          <option value="gemini">Google Gemini</option>
           <option value="custom">自定义</option>
         </select>
       </div>
@@ -3204,6 +3205,12 @@ const PROVIDER_PRESETS = {
     endpoint: 'https://api.moonshot.cn/v1/chat/completions',
     model: 'moonshot-v1-8k',
     label: 'Moonshot Kimi',
+    protocol: 'openai',
+  },
+  gemini: {
+    endpoint: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
+    model: 'gemini-2.5-flash',
+    label: 'Google Gemini',
     protocol: 'openai',
   },
   custom: {
