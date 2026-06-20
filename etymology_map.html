@@ -196,9 +196,9 @@
 <section class="max-w-[1600px] mx-auto px-4 mt-6">
   <div class="flex items-baseline justify-between mb-3">
     <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wider">初声导图 · Initial Consonant Atlas</h2>
-    <span class="text-xs text-slate-500">每个初声都是一个独立的"家"，等待填充</span>
+    <span class="text-xs text-slate-500">按 五音（牙·舌·唇·齿·喉）+ 元音起首 分组 · 点击进入</span>
   </div>
-  <div id="initial-grid" class="grid grid-cols-9 md:grid-cols-10 lg:grid-cols-19 gap-2"></div>
+  <div id="initial-grid" class="space-y-3"></div>
 </section>
 
 <!-- ============================== Main 3-pane View ============================== -->
@@ -542,6 +542,30 @@ const FINALS = [
   {char:'ㅇ', core:'未满态·留白'},
 ];
 
+// =========================================================================
+// 五音 + 元音 分组（用于结构化展示初声导图）
+//   传统五音：牙/舌/唇/齿/喉（按发音部位归类辅音）
+//   元音起首：ㅇ 在词首不发音，实为元音起首 → 按主元音再分 6 系
+// =========================================================================
+const INITIAL_GROUPS = [
+  { id:'velar',      label:'牙音', sub:'舌根音 · Velar',     color:'#38bdf8', members:[0, 1, 15] },        // ㄱ ㄲ ㅋ
+  { id:'lingual',    label:'舌音', sub:'舌尖音 · Lingual',   color:'#34d399', members:[2, 3, 4, 5, 16] },   // ㄴ ㄷ ㄸ ㄹ ㅌ
+  { id:'labial',     label:'唇音', sub:'双唇音 · Labial',    color:'#fbbf24', members:[6, 7, 8, 17] },      // ㅁ ㅂ ㅃ ㅍ
+  { id:'sibilant',   label:'齿音', sub:'龈腭音 · Sibilant',  color:'#f43f5e', members:[9, 10, 12, 13, 14] },// ㅅ ㅆ ㅈ ㅉ ㅊ
+  { id:'laryngeal',  label:'喉音', sub:'声门音 · Laryngeal', color:'#a78bfa', members:[18] },               // ㅎ（ㅇ 已移至元音组）
+];
+
+// 6 大主元音系（ㅇ 起首时再细分）
+//   21 个中声归并为 6 系：ㅏ/ㅓ/ㅗ/ㅜ/ㅡ/ㅣ
+const VOWEL_GROUPS = [
+  { id:'a',  char:'ㅏ', roman:'a',  label:'ㅏ系', desc:'向外明亮·阳',     medials:[0,1,2,3] },         // ㅏㅐㅑㅒ
+  { id:'eo', char:'ㅓ', roman:'eo', label:'ㅓ系', desc:'向内暗沉·阴',     medials:[4,5,6,7] },         // ㅓㅔㅕㅖ
+  { id:'o',  char:'ㅗ', roman:'o',  label:'ㅗ系', desc:'向上凸起·显现',   medials:[8,9,10,11,12] },    // ㅗㅘㅙㅚㅛ
+  { id:'u',  char:'ㅜ', roman:'u',  label:'ㅜ系', desc:'向下深潜·蕴藏',   medials:[13,14,15,16,17] },   // ㅜㅝㅞㅟㅠ
+  { id:'eu', char:'ㅡ', roman:'eu', label:'ㅡ系', desc:'水平大地·中性',   medials:[18,19] },            // ㅡㅢ
+  { id:'i',  char:'ㅣ', roman:'i',  label:'ㅣ系', desc:'垂直极点·尖锐',   medials:[20] },               // ㅣ
+];
+
 const STORAGE_KEY = 'korean_etymology_map_v1';
 
 // =========================================================================
@@ -551,6 +575,7 @@ let state = {
   entries: [],          // all word entries
   filter: {
     initialIdx: null,   // selected initial index (0-18), null = none
+    vowel: null,        // when initialIdx === 11 (ㅇ), further filter by main vowel id ('a'|'eo'|'o'|'u'|'eu'|'i'|null)
     root: null,         // selected root string
     search: '',
   },
@@ -598,6 +623,70 @@ function getInitialChar(hangul) {
 function getDefaultRoot(hangul) {
   return hangul ? hangul.charAt(0) : '';
 }
+
+// ---- 拉丁化（Revised Romanization 简化版，逐音节转写，不处理复杂同化规则）----
+const _INIT_ROMAN = ['g','kk','n','d','tt','r','m','b','pp','s','ss','','jj','tch','ch','k','t','p','h'];
+const _MED_ROMAN  = ['a','ae','ya','yae','eo','e','yeo','ye','o','wa','wae','oe','yo','u','wo','we','wi','yu','eu','ui','i'];
+// 27 个终声（终声编号 0..26），按字母音位转写；0 = 无终声
+const _FIN_ROMAN  = ['','g','g','g','n','n','n','d','l','l','l','l','l','l','l','l','m','b','b','d','l','l','g','d','b','l','l'];
+const _FINAL_NAMES = ['∅','ㄱ','ㄲ','ㄳ','ㄴ','ㄵ','ㄶ','ㄷ','ㄹ','ㄺ','ㄻ','ㄼ','ㄽ','ㄾ','ㄿ','ㅀ','ㅁ','ㅂ','ㅄ','ㅅ','ㅆ','ㅇ','ㅈ','ㅊ','ㅋ','ㅌ','ㅍ'];
+
+// 取得谚文字符的主元音系 id（'a'/'eo'/'o'/'u'/'eu'/'i'），非谚文或非元音起首返回 null
+function getMainVowelId(hangul) {
+  if (!hangul) return null;
+  const code = hangul.charCodeAt(0);
+  if (code < 0xAC00 || code > 0xD7A3) return null;
+  const s = code - 0xAC00;
+  const fin = s % 28;
+  const med = Math.floor(s / 28) % 21;
+  const ini = Math.floor(s / 28 / 21);
+  if (ini !== 11) return null;  // 仅元音起首（ㅇ）才有"主元音系"概念
+  for (const g of VOWEL_GROUPS) {
+    if (g.medials.includes(med)) return g.id;
+  }
+  return null;
+}
+
+// 转写整个字符串（含非谚文字符原样保留）
+function romanizeHangul(s) {
+  if (!s) return '';
+  let result = '';
+  for (const ch of s) {
+    const code = ch.codePointAt(0);
+    if (code < 0xAC00 || code > 0xD7A3) {
+      result += ch;
+      continue;
+    }
+    const syllable = code - 0xAC00;
+    const fin = syllable % 28;
+    const med = Math.floor(syllable / 28) % 21;
+    const ini = Math.floor(syllable / 28 / 21);
+    const iR = _INIT_ROMAN[ini] || '';
+    const mR = _MED_ROMAN[med] || '';
+    const fR = fin > 0 ? (_FIN_ROMAN[fin] || '') : '';
+    result += iR + mR + fR;
+  }
+  // 简化的连读同化清理：去重相邻重复辅音（如 gg→g, kk→k 在词中位置）
+  result = result
+    .replace(/([aeiou])\1+/g, '$1')         // 元音不重复
+    .replace(/([^aeiou])\1{1,}/g, '$1');     // 辅音相邻去重（简化）
+  return result;
+}
+
+// 转写单个初声/中声字符（用于按钮 tooltip / 词根标注）
+function romanizeJamo(ch) {
+  const iniIdx = INITIALS.findIndex(i => i.char === ch);
+  if (iniIdx >= 0) return _INIT_ROMAN[iniIdx] || '';
+  const medIdx = MEDIALS.findIndex(m => m.char === ch);
+  if (medIdx >= 0) return _MED_ROMAN[medIdx] || '';
+  return '';
+}
+
+// 取词根或词条的罗马字（优先用已存储 roman，缺失时自动转写）
+function autoRoman(s) {
+  if (!s) return '';
+  return romanizeHangul(s);
+}
 function escapeHtml(s) {
   if (s == null) return '';
   return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
@@ -614,19 +703,43 @@ function getEntryCountsByInitial() {
   });
   return counts;
 }
+// 6 大元音系的词条计数（仅统计 ㅇ 起首）
+function getEntryCountsByVowel() {
+  const counts = {};  // vowelId -> count
+  VOWEL_GROUPS.forEach(g => counts[g.id] = 0);
+  state.entries.forEach(e => {
+    if (getInitialIdx(e.hangul) !== 11) return;
+    const vid = getMainVowelId(e.hangul);
+    if (vid) counts[vid]++;
+  });
+  return counts;
+}
+// 判断词条是否通过当前 vowel 过滤器（仅当 initialIdx===11 即 ㅇ 时生效）
+function passesVowelFilter(e) {
+  if (state.filter.initialIdx !== 11) return true;        // 非 ㅇ 不受元音过滤
+  if (!state.filter.vowel) return true;                   // 未选元音系 = 全部
+  return getMainVowelId(e.hangul) === state.filter.vowel;
+}
+
 function getRootsForInitial(idx) {
   const rootsMap = new Map();  // root -> count
   state.entries.forEach(e => {
     if (getInitialIdx(e.hangul) !== idx) return;
+    if (!passesVowelFilter(e)) return;
     const r = e.root || getDefaultRoot(e.hangul);
     rootsMap.set(r, (rootsMap.get(r) || 0) + 1);
   });
-  return [...rootsMap.entries()].sort((a,b) => b[1] - a[1]);
+  // 按谚文 Unicode 顺序排序（localeCompare ko），让相近音位的词根聚拢
+  return [...rootsMap.entries()].sort((a, b) => (a[0] || '').localeCompare(b[0] || '', 'ko'));
 }
 function getEntriesForRoot(idx, root) {
-  return state.entries.filter(e =>
-    getInitialIdx(e.hangul) === idx && (e.root || getDefaultRoot(e.hangul)) === root
+  const list = state.entries.filter(e =>
+    getInitialIdx(e.hangul) === idx &&
+    (e.root || getDefaultRoot(e.hangul)) === root &&
+    passesVowelFilter(e)
   );
+  // 按谚文排序：同词根下的词条按音节顺序聚拢
+  return list.sort((a, b) => (a.hangul || '').localeCompare(b.hangul || '', 'ko'));
 }
 function getFilteredBySearch() {
   const q = state.filter.search.trim().toLowerCase();
@@ -663,24 +776,84 @@ function renderStats() {
 function renderInitialGrid() {
   const grid = document.getElementById('initial-grid');
   const counts = getEntryCountsByInitial();
+  const vowelCounts = getEntryCountsByVowel();
   const searchActive = !!state.filter.search.trim();
+  const initialActive = !searchActive && state.filter.initialIdx !== null;
 
-  grid.innerHTML = INITIALS.map((init, i) => {
-    const isActive = !searchActive && state.filter.initialIdx === i;
-    const hasEntries = counts[i] > 0;
+  // ---- 通用按钮渲染 ----
+  const btnHtml = (char, roman, count, isActive, hasEntries, onClick, core) => {
     const classes = [
-      'initial-btn', 'glass', 'rounded-xl', 'p-3', 'flex', 'flex-col', 'items-center',
-      'justify-center', 'cursor-pointer', 'border',
+      'initial-btn', 'glass', 'rounded-xl', 'p-2.5', 'flex', 'flex-col', 'items-center',
+      'justify-center', 'cursor-pointer', 'border', 'min-w-[64px]',
     ];
     if (isActive) classes.push('active');
     if (hasEntries) classes.push('has-entries');
+    const coreAttr = core ? ` title="${escapeHtml(core)}"` : '';
     return `
-      <button class="${classes.join(' ')}" onclick="selectInitial(${i})" title="${escapeHtml(init.core)}">
-        <span class="text-3xl font-bold ${hasEntries ? 'text-white' : 'text-slate-500'}">${init.char}</span>
-        <span class="text-[10px] text-slate-500 mt-1">${counts[i]}</span>
+      <button class="${classes.join(' ')}" ${onClick} ${coreAttr}>
+        <span class="text-2xl md:text-3xl font-bold ${hasEntries ? 'text-white' : 'text-slate-500'}">${char}</span>
+        <span class="text-[10px] text-slate-500 font-mono mt-0.5">${escapeHtml(roman)}</span>
+        <span class="text-[10px] text-slate-500 mt-0.5">${count}</span>
       </button>
     `;
-  }).join('');
+  };
+
+  let html = '';
+
+  // ---- 五音分组渲染 ----
+  INITIAL_GROUPS.forEach(group => {
+    const totalForGroup = group.members.reduce((s, i) => s + counts[i], 0);
+    html += `
+      <div class="glass rounded-2xl p-3">
+        <div class="flex items-baseline justify-between mb-2 px-1">
+          <div class="flex items-baseline gap-2">
+            <span class="text-sm font-bold" style="color:${group.color}">${group.label}</span>
+            <span class="text-[10px] text-slate-500">${escapeHtml(group.sub)}</span>
+          </div>
+          <span class="text-[10px] text-slate-600">${totalForGroup} 词条</span>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          ${group.members.map(i => {
+            const init = INITIALS[i];
+            const isActive = initialActive && state.filter.initialIdx === i;
+            const hasEntries = counts[i] > 0;
+            return btnHtml(init.char, romanizeJamo(init.char), counts[i],
+              isActive, hasEntries,
+              `onclick="selectInitial(${i})"`, init.core);
+          }).join('')}
+        </div>
+      </div>
+    `;
+  });
+
+  // ---- 元音起首分组（ㅇ 不发音，按 6 大主元音系展开） ----
+  const yiActive = initialActive && state.filter.initialIdx === 11;
+  const vowelTotal = Object.values(vowelCounts).reduce((s, n) => s + n, 0);
+  html += `
+    <div class="glass rounded-2xl p-3 border" style="border-color:rgba(167,139,250,0.25)">
+      <div class="flex items-baseline justify-between mb-2 px-1">
+        <div class="flex items-baseline gap-2">
+          <span class="text-sm font-bold text-[#a78bfa]">元音起首</span>
+          <span class="text-[10px] text-slate-500">ㅇ 词首不发音 · Vowel-initial · 按主元音系 6 组</span>
+        </div>
+        <span class="text-[10px] text-slate-600">${vowelTotal} 词条</span>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        ${btnHtml('ㅇ', '(∅)', vowelTotal, yiActive && !state.filter.vowel, vowelTotal > 0,
+          `onclick="selectInitial(11)"`, '空圆喉音·词首不发音 → 全部元音起首')}
+        ${VOWEL_GROUPS.map(g => {
+          const isActive = yiActive && state.filter.vowel === g.id;
+          const hasEntries = vowelCounts[g.id] > 0;
+          return btnHtml(g.char, g.roman, vowelCounts[g.id],
+            isActive, hasEntries,
+            `onclick="selectVowelInitial('${g.id}')"`,
+            `${g.label} · ${g.desc}`);
+        }).join('')}
+      </div>
+    </div>
+  `;
+
+  grid.innerHTML = html;
 }
 
 function renderRootsList() {
@@ -724,8 +897,15 @@ function renderRootsList() {
 
   const init = INITIALS[state.filter.initialIdx];
   const roots = getRootsForInitial(state.filter.initialIdx);
-  titleEl.innerHTML = `<span class="text-[#38bdf8] text-lg font-bold">${init.char}</span> 下词根`;
-  countEl.textContent = `${roots.length} 个词根 · ${state.entries.filter(e => getInitialIdx(e.hangul) === state.filter.initialIdx).length} 词条`;
+  // 标题反映是否处于元音子过滤
+  const vowelSuffix = (state.filter.initialIdx === 11 && state.filter.vowel)
+    ? `<span class="text-[#a78bfa] text-sm font-mono"> · ${escapeHtml(state.filter.vowel)}系</span>` : '';
+  titleEl.innerHTML = `<span class="text-[#38bdf8] text-lg font-bold">${init.char}</span>${vowelSuffix} 下词根`;
+  // 计数也尊重元音过滤
+  const filteredCount = state.entries.filter(e =>
+    getInitialIdx(e.hangul) === state.filter.initialIdx && passesVowelFilter(e)
+  ).length;
+  countEl.textContent = `${roots.length} 个词根 · ${filteredCount} 词条`;
 
   if (roots.length === 0) {
     container.innerHTML = emptyHint(
@@ -738,10 +918,14 @@ function renderRootsList() {
 
   container.innerHTML = roots.map(([root, count]) => {
     const isActive = state.filter.root === root;
+    const roman = romanizeHangul(root);
     return `
       <div class="root-item ${isActive ? 'active' : ''} px-3 py-2 rounded-lg" onclick="selectRoot('${escapeHtml(root)}')">
         <div class="flex items-baseline justify-between">
-          <span class="text-xl font-bold text-white">${escapeHtml(root)}</span>
+          <div class="flex items-baseline gap-2 min-w-0">
+            <span class="text-xl font-bold text-white">${escapeHtml(root)}</span>
+            ${roman ? `<span class="text-[10px] text-slate-500 font-mono">/${escapeHtml(roman)}/</span>` : ''}
+          </div>
           <span class="text-xs text-slate-500">${count}</span>
         </div>
       </div>
@@ -772,7 +956,12 @@ function renderWordsList() {
 
   const entries = getEntriesForRoot(state.filter.initialIdx, state.filter.root);
   const init = INITIALS[state.filter.initialIdx];
-  titleEl.innerHTML = `<span class="text-[#f43f5e] text-lg font-bold">${escapeHtml(state.filter.root)}</span> 下词条`;
+  const rootRoman = romanizeHangul(state.filter.root);
+  titleEl.innerHTML = `
+    <span class="text-[#f43f5e] text-lg font-bold">${escapeHtml(state.filter.root)}</span>
+    ${rootRoman ? `<span class="text-slate-500 text-xs font-mono">/${escapeHtml(rootRoman)}/</span>` : ''}
+    <span class="text-slate-400 text-xs ml-1">下词条</span>
+  `;
 
   if (entries.length === 0) {
     container.innerHTML = emptyHint('暂无词条', '点击右上角"+ 添加到此词根"');
@@ -940,20 +1129,49 @@ function renderReferencePanel() {
 // SELECTORS / NAVIGATION
 // =========================================================================
 function selectInitial(idx) {
-  // Toggle off if same
-  if (state.filter.initialIdx === idx) {
+  // Toggle off if same click & no vowel sub-filter
+  if (state.filter.initialIdx === idx && !state.filter.vowel) {
     state.filter.initialIdx = null;
     state.filter.root = null;
+    state.selectedEntryId = null;
   } else {
     state.filter.initialIdx = idx;
+    state.filter.vowel = null;  // 点 ㅇ 主按钮 = 清空元音子过滤 = 显示全部元音起首
     state.filter.root = null;
+    cascadeToFirstRootAndEntry();
   }
   clearSearchSilent();
   render();
 }
 
+// 点元音系按钮：先进入 ㅇ，再按主元音过滤
+function selectVowelInitial(vowelId) {
+  state.filter.initialIdx = 11;
+  state.filter.vowel = (state.filter.vowel === vowelId) ? null : vowelId;
+  state.filter.root = null;
+  cascadeToFirstRootAndEntry();
+  clearSearchSilent();
+  render();
+}
+
+// 级联：自动选中第一个词根 + 第一个词条（保持卡片联动一致）
+function cascadeToFirstRootAndEntry() {
+  const roots = getRootsForInitial(state.filter.initialIdx);
+  if (roots.length === 0) {
+    state.selectedEntryId = null;
+    return;
+  }
+  const firstRoot = roots[0][0];
+  state.filter.root = firstRoot;
+  const entries = getEntriesForRoot(state.filter.initialIdx, firstRoot);
+  state.selectedEntryId = entries.length > 0 ? entries[0].id : null;
+}
+
 function selectRoot(root) {
   state.filter.root = root;
+  // 级联：自动选中该词根下第一个词条
+  const entries = getEntriesForRoot(state.filter.initialIdx, root);
+  state.selectedEntryId = entries.length > 0 ? entries[0].id : null;
   render();
 }
 
@@ -1012,6 +1230,9 @@ function autofillFromHangul() {
   // Auto-fill root if empty
   const rootField = document.getElementById('add-root');
   if (!rootField.value) rootField.value = getDefaultRoot(hangul);
+  // Auto-fill roman if empty
+  const romanField = document.getElementById('add-roman');
+  if (!romanField.value) romanField.value = romanizeHangul(hangul);
 }
 
 function saveEntry() {
