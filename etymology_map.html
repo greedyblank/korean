@@ -251,13 +251,16 @@
         <button onclick="cycleTTSRateBtn()" id="tts-rate-btn" class="px-2 h-8 flex items-center justify-center text-xs rounded-lg bg-[#34d399]/10 hover:bg-[#34d399]/20 border border-[#34d399]/30 text-[#6ee7b7] transition font-mono" title="朗读速度（点击切换）">
           <span id="tts-rate-label">1×</span>
         </button>
-        <button onclick="exportJSON()" class="px-2.5 py-1.5 text-xs rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 transition">
+        <button onclick="exportJSON()" class="px-2.5 py-1.5 text-xs rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 transition" title="导出 JSON（含标签图）">
           ↓
         </button>
         <label class="px-2.5 py-1.5 text-xs rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 transition cursor-pointer" title="导入 JSON">
           ↑
           <input type="file" accept=".json" onchange="importJSON(event)" class="hidden">
         </label>
+        <button onclick="bindLocalFile()" class="px-2.5 py-1.5 text-xs rounded-lg bg-[#fbbf24]/10 hover:bg-[#fbbf24]/20 border border-[#fbbf24]/30 text-[#fcd34d] transition" title="绑定本地文件，每次修改自动写盘（防止清浏览器数据丢失）">
+          📁 绑定
+        </button>
         <button onclick="confirmReset()" class="w-8 h-8 flex items-center justify-center text-sm rounded-lg bg-white/5 hover:bg-[#f43f5e]/20 border border-white/10 hover:border-[#f43f5e]/30 text-slate-400 hover:text-[#fda4af] transition" title="重置">
           ↺
         </button>
@@ -267,6 +270,8 @@
 
   <!-- 可折叠：搜索栏 -->
   <div id="header-search" class="header-collapsible max-w-[1600px] mx-auto px-4 pb-2.5">
+    <!-- 文件同步状态 -->
+    <div id="file-sync-indicator" class="hidden mb-2 text-[10px] flex items-center gap-1.5 font-mono"></div>
     <div class="relative">
       <input id="search-input" type="text" placeholder="搜索：한글 / 拉丁化 / 释义 / 标签 / 笔记…  (快捷键 /)"
              oninput="onSearch(this.value)"
@@ -772,8 +777,188 @@ function save() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state.entries));
     localStorage.setItem(TAGGRAPH_KEY, JSON.stringify(state.tagGraph || {}));
+    // 实时同步到本地文件（如果已绑定）
+    if (fileSyncState.handle) {
+      syncToFileDebounced();
+    }
   } catch(e) {
     toast('保存失败：' + e.message, 'error');
+  }
+}
+
+// =========================================================================
+// FILE SYNC · 本地文件实时备份（File System Access API）
+//   绑定后每次 save() 自动写入文件，防止清浏览器数据丢失
+//   仅 Chrome/Edge 支持；句柄存 IndexedDB 跨会话保留
+// =========================================================================
+const fileSyncState = {
+  handle: null,        // FileSystemFileHandle
+  syncScheduled: false,
+  lastSync: 0,
+};
+const FILE_HANDLE_DB = 'korean_etymology_fs';
+const FILE_HANDLE_STORE = 'handles';
+const FILE_HANDLE_KEY = 'main';
+
+function _fsSupported() {
+  return typeof window !== 'undefined' && 'showSaveFilePicker' in window;
+}
+
+// IndexedDB 句柄存取（file handle 需要结构化克隆才能持久化）
+function _idbOpen() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(FILE_HANDLE_DB, 1);
+    req.onupgradeneeded = () => {
+      req.result.createObjectStore(FILE_HANDLE_STORE);
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+async function _idbSaveHandle(handle) {
+  const db = await _idbOpen();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(FILE_HANDLE_STORE, 'readwrite');
+    tx.objectStore(FILE_HANDLE_STORE).put(handle, FILE_HANDLE_KEY);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+async function _idbLoadHandle() {
+  try {
+    const db = await _idbOpen();
+    return await new Promise((resolve, reject) => {
+      const tx = db.transaction(FILE_HANDLE_STORE, 'readonly');
+      const req = tx.objectStore(FILE_HANDLE_STORE).get(FILE_HANDLE_KEY);
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => reject(req.error);
+    });
+  } catch(e) { return null; }
+}
+async function _idbClearHandle() {
+  try {
+    const db = await _idbOpen();
+    return new Promise((resolve) => {
+      const tx = db.transaction(FILE_HANDLE_STORE, 'readwrite');
+      tx.objectStore(FILE_HANDLE_STORE).delete(FILE_HANDLE_KEY);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => resolve();
+    });
+  } catch(e) {}
+}
+
+async function bindLocalFile() {
+  if (!_fsSupported()) {
+    toast('当前浏览器不支持文件系统写入。请用 Chrome/Edge，或继续用 ↓ 导出 手动备份', 'error');
+    return;
+  }
+  try {
+    const handle = await window.showSaveFilePicker({
+      suggestedName: 'korean_etymology_backup.json',
+      types: [{ description: 'JSON 备份', accept: { 'application/json': ['.json'] } }],
+    });
+    fileSyncState.handle = handle;
+    await _idbSaveHandle(handle);
+    await syncToFile(true);
+    updateFileSyncStatus();
+    toast(`✓ 已绑定文件：${handle.name}（每次修改自动写盘）`, 'success');
+  } catch (e) {
+    if (e.name !== 'AbortError') {
+      toast('绑定失败：' + e.message, 'error');
+    }
+  }
+}
+
+async function unbindLocalFile() {
+  if (!fileSyncState.handle) return;
+  if (!confirm('解除本地文件绑定？\n（不会删除已写入的文件，只是不再自动同步）')) return;
+  fileSyncState.handle = null;
+  await _idbClearHandle();
+  updateFileSyncStatus();
+  toast('已解除绑定', 'info');
+}
+
+// 检查/请求写权限（刷新页面后句柄还在但权限丢了）
+async function verifyPermission(handle) {
+  const opts = { mode: 'readwrite' };
+  if ((await handle.queryPermission(opts)) === 'granted') return true;
+  if ((await handle.requestPermission(opts)) === 'granted') return true;
+  return false;
+}
+
+// 实际写入
+async function syncToFile(force = false) {
+  if (!fileSyncState.handle) return;
+  try {
+    const data = {
+      version: 2,
+      exportedAt: new Date().toISOString(),
+      count: state.entries.length,
+      entries: state.entries,
+      tagGraph: state.tagGraph || {},
+    };
+    const writable = await fileSyncState.handle.createWritable();
+    await writable.write(JSON.stringify(data, null, 2));
+    await writable.close();
+    fileSyncState.lastSync = Date.now();
+    if (force) updateFileSyncStatus();
+  } catch (e) {
+    console.error('File sync failed:', e);
+    if (e.name === 'NotAllowedError') {
+      toast('文件写入权限丢失，请重新绑定', 'error');
+      fileSyncState.handle = null;
+      await _idbClearHandle();
+      updateFileSyncStatus();
+    }
+  }
+}
+
+// 防抖：连续修改只在 500ms 静止后写一次
+function syncToFileDebounced() {
+  if (fileSyncState.syncScheduled) return;
+  fileSyncState.syncScheduled = true;
+  setTimeout(() => {
+    fileSyncState.syncScheduled = false;
+    syncToFile();
+  }, 500);
+}
+
+function updateFileSyncStatus() {
+  const indicator = document.getElementById('file-sync-indicator');
+  if (!indicator) return;
+  if (fileSyncState.handle) {
+    const t = new Date(fileSyncState.lastSync);
+    const tStr = fileSyncState.lastSync > 0
+      ? t.toLocaleTimeString('zh-CN', { hour12: false })
+      : '—';
+    indicator.classList.remove('hidden');
+    indicator.innerHTML = `
+      <span class="w-1.5 h-1.5 rounded-full bg-[#34d399] inline-block"></span>
+      <span class="text-[#6ee7b7]">已同步</span>
+      <span class="text-slate-600">${escapeHtml(fileSyncState.handle.name)}</span>
+      <span class="text-slate-700">${tStr}</span>
+      <button onclick="unbindLocalFile()" class="text-slate-500 hover:text-[#fda4af] ml-1" title="解除绑定">✕</button>
+    `;
+  } else {
+    indicator.classList.add('hidden');
+  }
+}
+
+// 启动时尝试恢复已绑定的句柄
+async function restoreFileSync() {
+  if (!_fsSupported()) return;
+  const handle = await _idbLoadHandle();
+  if (!handle) return;
+  // 权限仍在？直接用；否则保留句柄，下次操作时再请求
+  const ok = await verifyPermission(handle);
+  if (ok) {
+    fileSyncState.handle = handle;
+    updateFileSyncStatus();
+    toast(`已恢复本地文件同步：${handle.name}`, 'info');
+  } else {
+    // 句柄还在但权限没了，保留句柄，加个按钮提示重新授权
+    fileSyncState.handle = handle;
+    updateFileSyncStatus();
   }
 }
 function load() {
@@ -2326,10 +2511,11 @@ function exportJSON() {
     return;
   }
   const data = {
-    version: 1,
+    version: 2,
     exportedAt: new Date().toISOString(),
     count: state.entries.length,
     entries: state.entries,
+    tagGraph: state.tagGraph || {},
   };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
@@ -2338,7 +2524,7 @@ function exportJSON() {
   a.download = `korean_etymology_map_${new Date().toISOString().slice(0, 10)}.json`;
   a.click();
   URL.revokeObjectURL(url);
-  toast(`已导出 ${state.entries.length} 条`, 'success');
+  toast(`已导出 ${state.entries.length} 条 + 标签图`, 'success');
 }
 
 function importJSON(event) {
@@ -3204,6 +3390,8 @@ maybeSeedExample();
 renderReferencePanel();
 render();
 updateAIButton();
+// 尝试恢复本地文件同步（异步，不阻塞首屏）
+restoreFileSync();
 // 同步排序按钮初始标签
 setSortMode(sortMode);
 // 隐藏不支持的 TTS 控件
