@@ -784,8 +784,8 @@ function renderInitialGrid() {
   // ---- 紧凑型按钮（行内 pill） ----
   const btnHtml = (char, roman, count, isActive, hasEntries, onClick, core) => {
     const classes = [
-      'initial-btn', 'rounded-lg', 'px-2.5', 'py-1.5',
-      'flex', 'items-baseline', 'gap-1.5', 'cursor-pointer', 'border',
+      'initial-btn', 'rounded-lg', 'px-2', 'py-1',
+      'flex', 'items-baseline', 'gap-1', 'cursor-pointer', 'border',
       'bg-white/[0.03]', 'hover:bg-white/[0.08]',
     ];
     if (isActive) classes.push('active');
@@ -793,33 +793,28 @@ function renderInitialGrid() {
     const coreAttr = core ? ` title="${escapeHtml(core)}"` : '';
     return `
       <button class="${classes.join(' ')}" ${onClick} ${coreAttr}>
-        <span class="text-xl font-bold ${hasEntries ? 'text-white' : 'text-slate-500'}">${char}</span>
+        <span class="text-lg font-bold ${hasEntries ? 'text-white' : 'text-slate-500'}">${char}</span>
         ${roman ? `<span class="text-[10px] text-slate-500 font-mono">${escapeHtml(roman)}</span>` : ''}
         <span class="text-[10px] ${hasEntries ? 'text-[#34d399]' : 'text-slate-600'} font-mono">${count}</span>
       </button>
     `;
   };
 
-  // ---- 通用分组行（标签 + 按钮 + 计数） ----
-  const rowHtml = (label, sub, color, buttonsHtml, total, extraBorder) => {
-    const borderStyle = extraBorder ? `border-color:${color}40` : '';
+  // ---- 一组 = 一个行内"色块"（标签 pill + 按钮，整体 flex-wrap 进大流） ----
+  const groupChipHtml = (label, color, buttonsHtml) => {
     return `
-      <div class="glass rounded-xl px-3 py-2 flex items-center gap-3 flex-wrap border" style="${borderStyle}">
-        <div class="flex items-baseline gap-1.5 shrink-0 min-w-[88px]">
-          <span class="text-sm font-bold" style="color:${color}">${label}</span>
-          <span class="text-[10px] text-slate-500 hidden sm:inline">${escapeHtml(sub)}</span>
-        </div>
-        <div class="flex flex-wrap items-center gap-1.5 flex-1">${buttonsHtml}</div>
-        <span class="text-[10px] text-slate-600 shrink-0 ml-auto">${total} 词条</span>
+      <div class="flex items-center gap-1.5 rounded-lg pl-1.5 pr-2 py-1 border" style="background:${color}14;border-color:${color}33">
+        <span class="text-[11px] font-bold px-1 rounded" style="color:${color};background:${color}1f">${escapeHtml(label)}</span>
+        <div class="flex items-center gap-1">${buttonsHtml}</div>
       </div>
     `;
   };
 
   let html = '';
+  // 单一 flex-wrap 容器：所有分组自然流式排布，小组不占整行
+  html += '<div class="flex flex-wrap items-center gap-2">';
 
-  // ---- 五音分组（每行一组） ----
   INITIAL_GROUPS.forEach(group => {
-    const totalForGroup = group.members.reduce((s, i) => s + counts[i], 0);
     const buttons = group.members.map(i => {
       const init = INITIALS[i];
       const isActive = initialActive && state.filter.initialIdx === i;
@@ -828,14 +823,14 @@ function renderInitialGrid() {
         isActive, hasEntries,
         `onclick="selectInitial(${i})"`, init.core);
     }).join('');
-    html += rowHtml(group.label, group.sub, group.color, buttons, totalForGroup, false);
+    html += groupChipHtml(group.label, group.color, buttons);
   });
 
-  // ---- 元音起首分组（ㅇ + 6 大主元音系） ----
+  // 元音起首：ㅇ + 6 大主元音系
   const yiActive = initialActive && state.filter.initialIdx === 11;
-  const vowelTotal = Object.values(vowelCounts).reduce((s, n) => s + n, 0);
   const vowelButtons =
-    btnHtml('ㅇ', '∅', vowelTotal, yiActive && !state.filter.vowel, vowelTotal > 0,
+    btnHtml('ㅇ', '∅', Object.values(vowelCounts).reduce((s,n)=>s+n,0),
+      yiActive && !state.filter.vowel, Object.values(vowelCounts).reduce((s,n)=>s+n,0) > 0,
       `onclick="selectInitial(11)"`, '空圆喉音·词首不发音 → 全部元音起首') +
     VOWEL_GROUPS.map(g => {
       const isActive = yiActive && state.filter.vowel === g.id;
@@ -845,8 +840,9 @@ function renderInitialGrid() {
         `onclick="selectVowelInitial('${g.id}')"`,
         `${g.label} · ${g.desc}`);
     }).join('');
-  html += rowHtml('元音起首', 'ㅇ 不发音 · 按主元音 6 系', '#a78bfa', vowelButtons, vowelTotal, true);
+  html += groupChipHtml('元音', '#a78bfa', vowelButtons);
 
+  html += '</div>';
   grid.innerHTML = html;
 }
 
