@@ -2126,6 +2126,13 @@ document.addEventListener('keydown', (e) => {
 
   if (e.key === '/') {
     e.preventDefault();
+    // 若 header 已折叠，先展开再聚焦（否则搜索框不可见）
+    if (_headerCompact) {
+      setHeaderCompact(false);
+      _headerManual = true;
+      clearTimeout(_manualResetTimer);
+      _manualResetTimer = setTimeout(() => { _headerManual = false; }, 8000);
+    }
     document.getElementById('search-input').focus();
     return;
   }
