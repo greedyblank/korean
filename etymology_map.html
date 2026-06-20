@@ -765,6 +765,19 @@
       <button onclick="closeSettingsModal()" class="text-slate-400 hover:text-white">✕</button>
     </div>
 
+    <!-- 配置切换 Tab -->
+    <div class="flex gap-1 mb-4 bg-white/5 rounded-lg p-1">
+      <button id="tab-btn-primary" onclick="switchLLMTab('primary')"
+        class="flex-1 px-3 py-1.5 text-xs rounded-md font-semibold transition">
+        🧠 主 LLM <span class="text-[10px] opacity-70">(新词条)</span>
+      </button>
+      <button id="tab-btn-completion" onclick="switchLLMTab('completion')"
+        class="flex-1 px-3 py-1.5 text-xs rounded-md font-semibold transition">
+        ✨ 补全 LLM <span class="text-[10px] opacity-70">(批量填充)</span>
+      </button>
+    </div>
+    <p id="tab-hint" class="text-[11px] text-slate-400 mb-3"></p>
+
     <div class="space-y-3">
       <div>
         <label class="text-xs text-slate-400 block mb-1">服务商 Provider</label>
@@ -820,6 +833,17 @@
         </label>
       </div>
 
+      <!-- 复用主 LLM 配置按钮（仅补全 Tab 显示） -->
+      <div id="reuse-primary-row" class="hidden bg-[#38bdf8]/10 border border-[#38bdf8]/30 rounded-lg p-3">
+        <label class="flex items-start gap-2 cursor-pointer">
+          <input type="checkbox" id="set-reuse-primary" onchange="onReuseToggle()" class="mt-0.5 accent-[#38bdf8]">
+          <div class="text-xs leading-relaxed">
+            <span class="text-[#7dd3fc] font-semibold">🔗 与主 LLM 共用配置</span>
+            <p class="text-slate-400 mt-1">勾选后，补全任务直接使用上方「主 LLM」的设置（无需重复填写）。</p>
+          </div>
+        </label>
+      </div>
+
       <div class="bg-[#fbbf24]/10 border border-[#fbbf24]/30 rounded-lg p-3 text-xs text-[#fcd34d] leading-relaxed">
         ⚠️ <strong>安全提示</strong>：API Key 仅保存在你浏览器的 localStorage 中，
         不会上传到任何服务器。仅在你本机使用，请勿在公共电脑上保存。
@@ -848,11 +872,27 @@
 
     <div id="ai-scan-panel" class="space-y-3">
       <div id="ai-scan-result" class="text-sm text-slate-300"></div>
+
+      <!-- 字段选择面板 -->
+      <div class="bg-white/[0.03] border border-white/10 rounded-lg p-3">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs text-[#d8b4fe] font-semibold">补全字段（自选）</span>
+          <div class="flex gap-2 text-[10px]">
+            <button onclick="setAllCompletionFields(true)" class="text-[#7dd3fc] hover:underline">全选</button>
+            <button onclick="setAllCompletionFields(false)" class="text-slate-400 hover:underline">全不选</button>
+            <label class="flex items-center gap-1 cursor-pointer text-slate-300">
+              <input id="comp-only-empty" type="checkbox" class="w-3 h-3 accent-[#34d399]" onchange="toggleCompletionOnlyIfEmpty(this.checked)" checked>
+              <span>仅填空字段</span>
+            </label>
+          </div>
+        </div>
+        <div id="comp-field-grid" class="grid grid-cols-3 md:grid-cols-4 gap-1.5 text-[11px]"></div>
+      </div>
+
       <div class="bg-white/[0.03] border border-white/10 rounded-lg p-3 text-xs text-slate-400 leading-relaxed">
         <p class="mb-1.5"><strong class="text-[#d8b4fe]">补全规则：</strong></p>
-        <p>· 仅补全缺失字段（已有内容保留不动）</p>
-        <p>· 自动生成：实际发音 / 音素分拆 / 语义流转分析 / 标签</p>
-        <p>· 基于已内置的 19 初声 + 21 中声 + 9 终声音韵象征体系</p>
+        <p>· 默认仅补全缺失字段（勾选「仅填空字段」时）；取消勾选则覆盖所有选中字段</p>
+        <p>· 基于已内置的造物主矩阵（19 初声 + 21 中声 + 27 终声）+ 词源/词法体系</p>
         <p>· 每批发送 5 条，避免触发速率限制</p>
       </div>
       <div class="flex justify-end gap-2 pt-2">
@@ -2551,7 +2591,8 @@ async function runAINewEntry() {
     _setStatus('请先输入韩文或中文', 'error');
     return;
   }
-  if (!llmSettings.apiKey) {
+  const primaryLLM = getLLMSlot('primary');
+  if (!primaryLLM.apiKey) {
     _setStatus('请先在 ⚙ 设置里填写 API Key', 'error');
     setTimeout(openSettingsModal, 400);
     return;
@@ -3572,13 +3613,23 @@ const PROVIDER_PRESETS = {
   },
 };
 
+// Dual LLM config: primary (for new entries) + completion (for batch fill)
+// Each slot is a full settings object. completion may set `reusePrimary: true`.
+function _defaultLLMSlot() {
+  return {
+    provider: 'glm_anthropic',
+    endpoint: PROVIDER_PRESETS.glm_anthropic.endpoint,
+    model: PROVIDER_PRESETS.glm_anthropic.model,
+    apiKey: '',
+    useProxy: false,
+  };
+}
 let llmSettings = {
-  provider: 'glm_anthropic',
-  endpoint: PROVIDER_PRESETS.glm_anthropic.endpoint,
-  model: PROVIDER_PRESETS.glm_anthropic.model,
-  apiKey: '',
-  useProxy: false,  // GLM supports CORS natively — proxy only needed for some providers
+  primary: _defaultLLMSlot(),
+  completion: { ..._defaultLLMSlot(), reusePrimary: true },
 };
+// Tracks which slot the settings modal is currently editing
+let activeLLMTab = 'primary';
 
 // AI completion state
 let aiState = {
@@ -3586,19 +3637,35 @@ let aiState = {
   cancelRequested: false,
 };
 
+// Resolve effective settings (handles reusePrimary)
+function getLLMSlot(slotName) {
+  const slot = llmSettings[slotName];
+  if (!slot) return llmSettings.primary;
+  if (slotName === 'completion' && slot.reusePrimary) return llmSettings.primary;
+  return slot;
+}
+
 function loadSettings() {
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
     if (raw) {
       const saved = JSON.parse(raw);
-      // Merge but reset provider/endpoint/model if the saved provider no longer exists
-      // (e.g. old 'glm' preset was renamed). This prevents broken configs after updates.
-      if (saved.provider && !PROVIDER_PRESETS[saved.provider]) {
-        delete saved.provider;
-        delete saved.endpoint;
-        delete saved.model;
+      // Backward compat: migrate legacy flat config -> primary slot
+      if (saved && !saved.primary && saved.provider) {
+        if (!PROVIDER_PRESETS[saved.provider]) {
+          delete saved.provider; delete saved.endpoint; delete saved.model;
+        }
+        llmSettings.primary = { ..._defaultLLMSlot(), ...saved };
+        llmSettings.completion = { ..._defaultLLMSlot(), reusePrimary: true };
+      } else if (saved && saved.primary) {
+        // sanitize both slots
+        for (const k of ['primary', 'completion']) {
+          if (saved[k] && saved[k].provider && !PROVIDER_PRESETS[saved[k].provider]) {
+            delete saved[k].provider; delete saved[k].endpoint; delete saved[k].model;
+          }
+          llmSettings[k] = { ...llmSettings[k], ...(saved[k] || {}) };
+        }
       }
-      llmSettings = { ...llmSettings, ...saved };
     }
   } catch(e) { console.error(e); }
 }
@@ -3606,12 +3673,85 @@ function saveSettingsToStorage() {
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(llmSettings));
 }
 
+function _paintLLMTabs() {
+  const pBtn = document.getElementById('tab-btn-primary');
+  const cBtn = document.getElementById('tab-btn-completion');
+  const reuseRow = document.getElementById('reuse-primary-row');
+  const hint = document.getElementById('tab-hint');
+  if (activeLLMTab === 'primary') {
+    pBtn.className = 'flex-1 px-3 py-1.5 text-xs rounded-md font-semibold transition bg-[#38bdf8] text-slate-900';
+    cBtn.className = 'flex-1 px-3 py-1.5 text-xs rounded-md font-semibold transition bg-white/5 text-slate-300 hover:bg-white/10';
+    if (reuseRow) reuseRow.classList.add('hidden');
+    if (hint) hint.textContent = '主 LLM 用于「AI 新词条」（要求强模型：GLM-4.5/Claude/GPT-4 级别）';
+  } else {
+    cBtn.className = 'flex-1 px-3 py-1.5 text-xs rounded-md font-semibold transition bg-[#38bdf8] text-slate-900';
+    pBtn.className = 'flex-1 px-3 py-1.5 text-xs rounded-md font-semibold transition bg-white/5 text-slate-300 hover:bg-white/10';
+    if (reuseRow) reuseRow.classList.remove('hidden');
+    if (hint) hint.textContent = '补全 LLM 用于批量字段填充（可用便宜快速模型：glm-4-flash/GPT-4o-mini）';
+  }
+  // When reusePrimary is checked on completion tab, reflect primary's settings in form (read-only feel)
+  _syncReuseUi();
+}
+
+function _syncReuseUi() {
+  if (activeLLMTab !== 'completion') return;
+  const reuseInp = document.getElementById('set-reuse-primary');
+  if (!reuseInp) return;
+  const reuseChecked = reuseInp.checked;
+  // When reuse is on, show primary's values (sync them) and dim the inputs
+  if (reuseChecked) {
+    const p = llmSettings.primary;
+    document.getElementById('set-provider').value = p.provider;
+    document.getElementById('set-endpoint').value = p.endpoint;
+    document.getElementById('set-model').value = p.model;
+    document.getElementById('set-apikey').value = p.apiKey;
+    document.getElementById('set-use-proxy').checked = !!p.useProxy;
+  }
+  ['set-provider','set-endpoint','set-model','set-apikey','set-use-proxy'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.disabled = reuseChecked;
+  });
+  const keyBtn = document.getElementById('key-vis-btn');
+  if (keyBtn) keyBtn.disabled = reuseChecked;
+}
+
+function onReuseToggle() {
+  _syncReuseUi();
+}
+
+function switchLLMTab(tab) {
+  // Save current form values back to the slot being edited (so user doesn't lose input)
+  _syncFormToSlot(activeLLMTab);
+  activeLLMTab = tab;
+  _loadSlotToForm(activeLLMTab);
+  _paintLLMTabs();
+}
+
+function _loadSlotToForm(slotName) {
+  const s = llmSettings[slotName];
+  document.getElementById('set-provider').value = s.provider;
+  document.getElementById('set-endpoint').value = s.endpoint;
+  document.getElementById('set-model').value = s.model;
+  document.getElementById('set-apikey').value = s.apiKey;
+  document.getElementById('set-use-proxy').checked = !!s.useProxy;
+  const reuseInp = document.getElementById('set-reuse-primary');
+  if (reuseInp) reuseInp.checked = !!s.reusePrimary;
+}
+
+function _syncFormToSlot(slotName) {
+  const s = llmSettings[slotName];
+  s.provider = document.getElementById('set-provider').value;
+  s.endpoint = document.getElementById('set-endpoint').value.trim();
+  s.model = document.getElementById('set-model').value.trim();
+  s.apiKey = document.getElementById('set-apikey').value.trim();
+  s.useProxy = document.getElementById('set-use-proxy').checked;
+  const reuseInp = document.getElementById('set-reuse-primary');
+  if (reuseInp) s.reusePrimary = reuseInp.checked;
+}
+
 function openSettingsModal() {
-  document.getElementById('set-provider').value = llmSettings.provider;
-  document.getElementById('set-endpoint').value = llmSettings.endpoint;
-  document.getElementById('set-model').value = llmSettings.model;
-  document.getElementById('set-apikey').value = llmSettings.apiKey;
-  document.getElementById('set-use-proxy').checked = !!llmSettings.useProxy;
+  _loadSlotToForm(activeLLMTab);
+  _paintLLMTabs();
   document.getElementById('settings-modal').classList.remove('hidden');
 }
 function closeSettingsModal() {
@@ -3637,11 +3777,7 @@ function toggleKeyVisibility() {
   }
 }
 function saveSettings() {
-  llmSettings.provider = document.getElementById('set-provider').value;
-  llmSettings.endpoint = document.getElementById('set-endpoint').value.trim();
-  llmSettings.model = document.getElementById('set-model').value.trim();
-  llmSettings.apiKey = document.getElementById('set-apikey').value.trim();
-  llmSettings.useProxy = document.getElementById('set-use-proxy').checked;
+  _syncFormToSlot(activeLLMTab);
   saveSettingsToStorage();
   closeSettingsModal();
   toast('LLM 设置已保存', 'success');
@@ -3659,7 +3795,8 @@ function copyProxyCmd() {
 
 function updateAIButton() {
   const btn = document.getElementById('ai-btn');
-  if (!llmSettings.apiKey) {
+  const eff = getLLMSlot('completion');
+  if (!eff.apiKey) {
     btn.classList.add('opacity-60');
     btn.title = '点击配置 API Key 后使用';
   } else {
@@ -3669,23 +3806,28 @@ function updateAIButton() {
 }
 
 async function testConnection() {
-  if (!llmSettings.apiKey && !document.getElementById('set-apikey').value) {
+  const slot = llmSettings[activeLLMTab];
+  const reuseInp = document.getElementById('set-reuse-primary');
+  const reuseActive = activeLLMTab === 'completion' && (reuseInp?.checked || slot.reusePrimary);
+  // Temporarily pull values from form (so user can test before saving)
+  const tempSettings = reuseActive
+    ? { ...llmSettings.primary }
+    : {
+        provider: document.getElementById('set-provider').value,
+        endpoint: document.getElementById('set-endpoint').value.trim(),
+        model: document.getElementById('set-model').value.trim(),
+        apiKey: document.getElementById('set-apikey').value.trim(),
+        useProxy: document.getElementById('set-use-proxy').checked,
+      };
+  if (!tempSettings.apiKey) {
     toast('请先填写 API Key', 'error');
     return;
   }
-  // Temporarily pull values from form (so user can test before saving)
-  const tempSettings = {
-    provider: document.getElementById('set-provider').value,
-    endpoint: document.getElementById('set-endpoint').value.trim(),
-    model: document.getElementById('set-model').value.trim(),
-    apiKey: document.getElementById('set-apikey').value.trim(),
-    useProxy: document.getElementById('set-use-proxy').checked,
-  };
   const actualEndpoint = resolveEndpoint(tempSettings);
   const btn = document.getElementById('test-conn-btn');
   btn.textContent = '⏳ 测试中...';
   btn.disabled = true;
-  console.log('[LLM Test] endpoint:', actualEndpoint, '| model:', tempSettings.model, '| protocol:', PROVIDER_PRESETS[tempSettings.provider]?.protocol);
+  console.log('[LLM Test] tab:', activeLLMTab, '| endpoint:', actualEndpoint, '| model:', tempSettings.model, '| protocol:', PROVIDER_PRESETS[tempSettings.provider]?.protocol);
   try {
     const resp = await callLLM(tempSettings, '请只输出 JSON: {"ok":true}', 50);
     toast(`✓ 连接成功 · ${tempSettings.model} · ${tempSettings.useProxy ? '代理' : '直连'}`, 'success');
@@ -3800,52 +3942,277 @@ function buildPhoneticReference() {
 }
 
 function findIncompleteEntries() {
-  return state.entries.filter(e => {
-    return !e.decomp || !e.analysis || !e.pron || !e.roman || (e.tags || []).length === 0;
-  });
+  const fields = completionConfig.fields;
+  return state.entries.filter(e => fields.some(f => isFieldEmpty(e, f)));
 }
 
-function openAIModal() {
-  if (!llmSettings.apiKey) {
-    toast('请先在 ⚙ 设置中填写 API Key', 'error');
-    openSettingsModal();
-    return;
+// ============ AI 补全字段配置 ============
+// 韩文枚举值 → 中文枚举值（一次性迁移用 + 后续双向往来时校验）
+// 用于把历史存储的韩文值规范化为中文（用户偏好：全中文界面）
+const ENUM_KO_TO_ZH = {
+  // 词性 pos
+  '명사': '名词', '대명사': '代词', '수사': '数词', '의존명사': '依存名词',
+  '동사': '动词', '형용사': '形容词', '관형사': '冠形词', '부사': '副词',
+  '조사': '助词', '감탄사': '感叹词', '접사': '接缀',
+  // 阶称 speechLevel
+  '합쇼체': '肃敬体', '해요체': '微敬体', '해라체': '基本体',
+  '하게체': '准敬体', '해체': '亲密体', '하오체': '对等体', '허요체': '谦敬体',
+  // 派生 derivation
+  '사동': '使动', '피동': '被动', '명사화': '名词化',
+  '동사화': '动词化', '부사화': '副词化', '관형화': '冠形化',
+  // 构词法 wordFormation
+  '단일어': '单纯词', '합성어': '复合词', '파생어': '派生词',
+  // 不规则活用 irregular
+  'ㄷ불규칙': 'ㄷ不规则', 'ㅂ불규칙': 'ㅂ不规则', 'ㅅ불규칙': 'ㅅ不规则',
+  'ㅎ불규칙': 'ㅎ不规则', '르불규칙': '르不规则', '우불규칙': '우不规则',
+  'ㄹ탈락': 'ㄹ脱落',
+  // 语体 register
+  '구어': '口语', '문어': '书面', '공식': '正式', '비공식': '非正式',
+  '문어+공식': '书面+正式', '구어+비공식': '口语+非正式',
+  // 词频 frequency
+  '고': '高频', '중': '中频', '저': '低频',
+  // 有灵性 animacy
+  '유정': '有灵', '무정': '无灵',
+  // 否定形式 negation（긍정 已在 polarity 表，复用即可）
+  '안': '안否定', '못': '못否定',
+  // 方言 dialect
+  '북한': '朝鲜', '제주': '济州', '경상': '庆尚', '전라': '全罗',
+  '함경': '咸镜', '평안': '平安',
+  // 极性 polarity（긍정/부정/중립）
+  '긍정_': '积极',  // 防与 negation 重复，实际不出现于该字段
+};
+
+// 字段适用性表 — applyCompletions 用作硬过滤
+// value: 该字段「适用」的 POS 集合；空数组表示对所有词性都适用
+const FIELD_APPLICABILITY = {
+  speechLevel: ['动词','形容词'],     // 仅用言
+  irregular:   ['动词','形容词'],     // 仅用言
+  honorific:   ['动词','形容词'],     // 主语敬语 -시- 接在用言上
+  humble:      ['动词','形容词','代词'], // 谦让包括 저（代词）和 드리다/뵙다（动词）
+  negation:    ['动词','形容词'],     // 안/못/지 않다 等都接用言
+  animacy:     ['名词','代词','数词','依存名词'], // 仅名词类
+  honNoun:     ['名词','代词'],       // 敬语名词变体（집→댁 等）
+  mimetic:     [],                    // 拟声拟态词性不固定（부사/형용사/동사）
+  // baseForm 特殊：仅当 derivation 非空时才适用（applyCompletions 内单独处理）
+};
+
+function _isFieldApplicable(field, entry) {
+  const allowed = FIELD_APPLICABILITY[field];
+  if (!allowed) return true; // 不在表里 = 全适用
+  if (allowed.length === 0) return true; // 空数组 = 全适用
+  if (field === 'baseForm') return !!(entry.derivation); // 派生来源
+  const pos = entry.pos || _inferPosFromEntry(entry);
+  if (!pos) return true; // 词性未知 = 不阻挡，交给 prompt 控制
+  return allowed.includes(pos);
+}
+
+// 朴素 POS 推断：用 wordClass 和 hangul 末尾形态作 fallback
+function _inferPosFromEntry(e) {
+  if (e.pos) return e.pos;
+  if (e.wordClass === '汉字词' || e.wordClass === '固有韩语') {
+    const h = (e.hangul || '').trim();
+    if (/다$/.test(h)) return '动词';     // -다 多为动词或形容词
+    if (/하다$/.test(h)) return '动词';
   }
+  return '';
+}
+
+function _normalizeEnum(field, value) {
+  if (!value || typeof value !== 'string') return value;
+  // 命中韩文映射则替换
+  if (ENUM_KO_TO_ZH[value]) return ENUM_KO_TO_ZH[value];
+  // 组合值（如 "구어+비공식"）逐段替换
+  if (value.includes('+')) {
+    return value.split('+').map(v => ENUM_KO_TO_ZH[v.trim()] || v.trim()).join('+');
+  }
+  return value;
+}
+
+// 一次性迁移：把所有 entry 上的韩文枚举值替换为中文
+function _migrateLegacyEnums() {
+  if (!window._enumMigrated) window._enumMigrated = {};
+  if (window._enumMigrated.done) return false;
+  const enumFields = ['pos','speechLevel','derivation','wordFormation',
+                      'irregular','register','frequency','animacy',
+                      'negation','dialect','polarity'];
+  let migrated = 0;
+  for (const e of (typeof entries !== 'undefined' ? entries : [])) {
+    for (const f of enumFields) {
+      if (e[f] && typeof e[f] === 'string') {
+        const n = _normalizeEnum(f, e[f]);
+        if (n !== e[f]) { e[f] = n; migrated++; }
+      }
+    }
+  }
+  window._enumMigrated.done = true;
+  if (migrated > 0) {
+    console.log(`[Enum Migration] ${migrated} fields converted KO → ZH`);
+    return true;
+  }
+  return false;
+}
+
+const COMPLETION_FIELD_META = {
+  // 内容字段
+  pron:        { label: '实际发音',   group: '内容', type: 'string' },
+  roman:       { label: '拉丁化',     group: '内容', type: 'string' },
+  decomp:      { label: '音素分拆',   group: '内容', type: 'string' },
+  analysis:    { label: '矩阵分析',   group: '内容', type: 'longtext' },
+  etymology:   { label: '词源',       group: '内容', type: 'longtext' },
+  related:     { label: '相关词',     group: '内容', type: 'array' },
+  examples:    { label: '例句',       group: '内容', type: 'array' },
+  culturalNote:{ label: '文化背景',   group: '内容', type: 'longtext' },
+  tags:        { label: '标签',       group: '内容', type: 'array' },
+  // 词源/分类
+  wordClass:   { label: '词类',       group: '分类', type: 'enum' },
+  hanja:       { label: '汉字',       group: '分类', type: 'string' },
+  // 词法特征
+  pos:         { label: '词性',       group: '词法', type: 'enum' },
+  speechLevel: { label: '阶称',       group: '词法', type: 'enum' },
+  honorific:   { label: '敬语-시-',   group: '词法', type: 'bool' },
+  humble:      { label: '谦让',       group: '词法', type: 'bool' },
+  honNoun:     { label: '敬语名词',   group: '词法', type: 'bool' },
+  derivation:  { label: '派生',       group: '词法', type: 'enum' },
+  baseForm:    { label: '基本形',     group: '词法', type: 'string' },
+  wordFormation:{ label: '构词法',    group: '词法', type: 'enum' },
+  irregular:   { label: '不规则',     group: '词法', type: 'enum' },
+  register:    { label: '语体',       group: '词法', type: 'enum' },
+  frequency:   { label: '词频',       group: '词法', type: 'enum' },
+  animacy:     { label: '有灵性',     group: '词法', type: 'enum' },
+  negation:    { label: '否定形式',   group: '词法', type: 'enum' },
+  dialect:     { label: '方言',       group: '词法', type: 'enum' },
+  polarity:    { label: '极性',       group: '词法', type: 'enum' },
+  mimetic:     { label: '拟声拟态',   group: '词法', type: 'bool' },
+};
+
+const COMPLETION_CONFIG_KEY = 'korean_etymology_completion_config_v1';
+let completionConfig = {
+  fields: ['pron','roman','decomp','analysis','tags','wordClass','pos','derivation','frequency'],
+  onlyIfEmpty: true,
+};
+
+function loadCompletionConfig() {
+  try {
+    const raw = localStorage.getItem(COMPLETION_CONFIG_KEY);
+    if (raw) {
+      const saved = JSON.parse(raw);
+      if (Array.isArray(saved.fields)) completionConfig.fields = saved.fields.filter(f => COMPLETION_FIELD_META[f]);
+      if (typeof saved.onlyIfEmpty === 'boolean') completionConfig.onlyIfEmpty = saved.onlyIfEmpty;
+    }
+  } catch(e) { console.error(e); }
+}
+function saveCompletionConfig() {
+  localStorage.setItem(COMPLETION_CONFIG_KEY, JSON.stringify(completionConfig));
+}
+
+function isFieldEmpty(entry, field) {
+  const v = entry[field];
+  if (v == null) return true;
+  if (typeof v === 'string') return v.trim() === '';
+  if (Array.isArray(v)) return v.length === 0;
+  if (typeof v === 'boolean') return v === false; // false 是布尔字段的「空」状态
+  return false;
+}
+
+function renderCompletionFieldPicker() {
+  const grid = document.getElementById('comp-field-grid');
+  if (!grid) return;
+  const groups = ['内容', '分类', '词法'];
+  let html = '';
+  for (const g of groups) {
+    const fieldsInGroup = Object.entries(COMPLETION_FIELD_META).filter(([_, m]) => m.group === g);
+    html += `<div class="col-span-full text-[10px] text-slate-500 uppercase tracking-wider mt-1">${g}</div>`;
+    for (const [key, m] of fieldsInGroup) {
+      const checked = completionConfig.fields.includes(key) ? 'checked' : '';
+      html += `
+        <label class="flex items-center gap-1 cursor-pointer px-1.5 py-1 rounded border border-white/5 hover:border-[#a855f7]/30 hover:bg-white/[0.03] transition ${checked ? 'bg-[#a855f7]/5' : ''}">
+          <input type="checkbox" class="w-3 h-3 accent-[#a855f7] comp-field-cb" data-field="${key}" ${checked} onchange="toggleCompletionField('${key}', this.checked)">
+          <span class="text-slate-300">${m.label}</span>
+        </label>`;
+    }
+  }
+  grid.innerHTML = html;
+  document.getElementById('comp-only-empty').checked = completionConfig.onlyIfEmpty;
+}
+
+function toggleCompletionField(field, on) {
+  if (on && !completionConfig.fields.includes(field)) completionConfig.fields.push(field);
+  if (!on) completionConfig.fields = completionConfig.fields.filter(f => f !== field);
+  saveCompletionConfig();
+  // 重渲染勾选状态背景色
+  renderCompletionFieldPicker();
+  // 重扫
+  refreshAIScanResult();
+}
+
+function setAllCompletionFields(on) {
+  completionConfig.fields = on ? Object.keys(COMPLETION_FIELD_META) : [];
+  saveCompletionConfig();
+  renderCompletionFieldPicker();
+  refreshAIScanResult();
+}
+
+function toggleCompletionOnlyIfEmpty(on) {
+  completionConfig.onlyIfEmpty = on;
+  saveCompletionConfig();
+}
+
+function refreshAIScanResult() {
   const incomplete = findIncompleteEntries();
   const panel = document.getElementById('ai-scan-result');
+  const runBtn = document.getElementById('ai-run-btn');
+  if (completionConfig.fields.length === 0) {
+    panel.innerHTML = `<div class="text-center py-4 text-xs text-[#fbbf24]">⚠ 请至少选择一个补全字段</div>`;
+    runBtn.disabled = true;
+    runBtn.classList.add('opacity-50', 'cursor-not-allowed');
+    return;
+  }
   if (incomplete.length === 0) {
     panel.innerHTML = `<div class="text-center py-6">
       <div class="text-3xl mb-2">✓</div>
-      <p class="text-[#6ee7b7]">所有 ${state.entries.length} 条词条字段均已完整，无需补全。</p>
+      <p class="text-[#6ee7b7]">所有 ${state.entries.length} 条词条在所选字段上均已完整，无需补全。</p>
     </div>`;
-    document.getElementById('ai-run-btn').disabled = true;
-    document.getElementById('ai-run-btn').classList.add('opacity-50', 'cursor-not-allowed');
+    runBtn.disabled = true;
+    runBtn.classList.add('opacity-50', 'cursor-not-allowed');
   } else {
-    const missDecomp = incomplete.filter(e => !e.decomp).length;
-    const missAnalysis = incomplete.filter(e => !e.analysis).length;
-    const missPron = incomplete.filter(e => !e.pron).length;
-    const missRoman = incomplete.filter(e => !e.roman).length;
-    const missTags = incomplete.filter(e => (e.tags || []).length === 0).length;
+    // 按字段统计缺失数
+    const missByField = {};
+    for (const f of completionConfig.fields) {
+      missByField[f] = state.entries.filter(e => isFieldEmpty(e, f)).length;
+    }
+    const top5 = Object.entries(missByField).sort((a,b) => b[1] - a[1]).slice(0, 6);
     const batches = Math.ceil(incomplete.length / 5);
     panel.innerHTML = `
       <div class="bg-white/[0.03] border border-white/10 rounded-lg p-4">
-        <div class="text-base text-slate-200 mb-2">扫描发现 <span class="text-[#d8b4fe] font-bold text-lg">${incomplete.length}</span> 条词条存在缺失字段：</div>
-        <div class="grid grid-cols-2 gap-2 text-xs text-slate-400 mt-3">
-          <div>缺音素分拆：<span class="text-[#fbbf24] font-bold">${missDecomp}</span></div>
-          <div>缺语义分析：<span class="text-[#fbbf24] font-bold">${missAnalysis}</span></div>
-          <div>缺实际发音：<span class="text-[#fbbf24] font-bold">${missPron}</span></div>
-          <div>缺拉丁化：<span class="text-[#fbbf24] font-bold">${missRoman}</span></div>
-          <div>缺标签：<span class="text-[#fbbf24] font-bold">${missTags}</span></div>
-          <div>预计调用：<span class="text-[#34d399] font-bold">${batches} 次</span></div>
+        <div class="text-base text-white mb-2">扫描完成：${incomplete.length} / ${state.entries.length} 条需补全</div>
+        <div class="text-xs text-slate-400 mb-2">预计分 <span class="text-[#d8b4fe] font-semibold">${batches}</span> 批 · 每批 5 条</div>
+        <div class="flex flex-wrap gap-2 mt-2">
+          ${top5.map(([f, n]) => `<span class="text-[10px] px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-slate-300">${COMPLETION_FIELD_META[f]?.label || f}: <span class="text-[#fbbf24]">${n}</span></span>`).join('')}
         </div>
       </div>
     `;
-    document.getElementById('ai-run-btn').disabled = false;
-    document.getElementById('ai-run-btn').classList.remove('opacity-50', 'cursor-not-allowed');
+    runBtn.disabled = false;
+    runBtn.classList.remove('opacity-50', 'cursor-not-allowed');
   }
+}
+
+function openAIModal() {
+  const completionLLM = getLLMSlot('completion');
+  if (!completionLLM.apiKey) {
+    toast('请先在 ⚙ 设置中填写「补全 LLM」的 API Key', 'error');
+    activeLLMTab = 'completion';
+    openSettingsModal();
+    return;
+  }
+  renderCompletionFieldPicker();
+  refreshAIScanResult();
   document.getElementById('ai-scan-panel').classList.remove('hidden');
   document.getElementById('ai-progress-panel').classList.add('hidden');
   document.getElementById('ai-modal').classList.remove('hidden');
+}
+
+function _openAIModalLegacyRemoved() {
+  // removed legacy body
 }
 function closeAIModal() {
   if (aiState.running) {
@@ -3878,29 +4245,78 @@ function updateAIProgress(done, total, current) {
 }
 
 function buildCompletionPrompt(batch) {
+  const fields = completionConfig.fields;
   const wordList = batch.map((e, i) => {
     const senses = (e.meaning || '').split(/[;；]/).map(s => s.trim()).filter(Boolean).join(' / ');
-    return `${i + 1}. ${e.hangul} | 罗马化: ${e.roman || '待生成'} | 释义: ${senses || '待你根据词形推断'}`;
+    const existing = [];
+    if (e.wordClass) existing.push(`类:${e.wordClass}`);
+    if (e.hanja) existing.push(`汉:${e.hanja}`);
+    if (e.pos) existing.push(`품사:${e.pos}`);
+    return `${i + 1}. ${e.hangul} | 释义: ${senses || '待你根据词形推断'}${existing.length > 0 ? ' | 已知: ' + existing.join(' ') : ''}`;
   }).join('\n');
 
-  return `你是韩语音韵象征（음성상징）专家。请基于以下音韵象征参考体系，为每个韩语词补全字段。
+  // 动态生成字段说明
+  const fieldDesc = {
+    pron: '实际发音（应用韵尾音变规则，如 맛→[맏]、앉다→[안따]）',
+    roman: '文化观光部标准罗马化（맛=mat、사람=saram）',
+    decomp: '音素分拆，谚文音节块+(语义描述)，多音节用 + 连接',
+    analysis: '基于造物主矩阵的音韵分析（初声/中声/终声/张力），50-150 字',
+    etymology: '词源追溯（古韩语/中古汉语/外来源语 + 词根词缀）',
+    related: '相关词数组（同根/近义/反义，反义加 (反) 前缀）',
+    examples: '例句数组，每条 "韩文 — 中文"',
+    culturalNote: '历史文化制度背景',
+    tags: '标签数组（1-4 个中文）',
+    wordClass: '词类（固有韩语/汉字词/外来语/混合词/新造词）',
+    hanja: '汉字（若为汉字词）',
+    pos: '词性 품사（11 类）',
+    speechLevel: '阶称（仅用言：肃敬体/微敬体/基本体/准敬体/亲密体/对等体/谦敬体）',
+    honorific: '布尔：是否含主语敬语 -시-',
+    humble: '布尔：是否为谦让语（저/드리다/뵙다）',
+    honNoun: '布尔：是否为敬语名词变体（집→댁）',
+    derivation: '派生类型（使动/被动/名词化/动词化/副词化/冠形化）',
+    baseForm: '基本形（派生所源，如 먹이다 → 먹다）',
+    wordFormation: '构词法（单纯词/复合词/派生词）',
+    irregular: '不规则活用（仅用言：ㄷ/ㅂ/ㅅ/ㅎ/르/우不规则/ㄹ脱落）',
+    register: '语体（口语/书面/正式/非正式 或组合）',
+    frequency: '词频（高频/中频/低频）',
+    animacy: '有灵性（仅名词：有灵/无灵）',
+    negation: '否定形式（肯定/안否定/못否定/지 않다/지 못하다/말다）',
+    dialect: '方言（标准语空 / 朝鲜/济州/庆尚/全罗/咸镜/平安）',
+    polarity: '极性（积极/消极/中性）',
+    mimetic: '布尔：是否为拟声拟态词',
+  };
+  const fieldList = fields.map(f => `- ${f}: ${fieldDesc[f] || ''}`).join('\n');
+
+  // 动态生成输出格式示例
+  const sampleObj = { hangul: batch[0]?.hangul || '찌다' };
+  for (const f of fields) {
+    if (f === 'tags' || f === 'related' || f === 'examples') sampleObj[f] = [];
+    else if (['honorific','humble','honNoun','mimetic'].includes(f)) sampleObj[f] = false;
+    else sampleObj[f] = '';
+  }
+
+  return `你是韩语词汇学和音韵学专家。请基于以下造物主矩阵参考体系，为每个韩语词补全用户指定的字段。
 
 ${buildPhoneticReference()}
 
 【任务】
-请为下列词条生成：
-- pron: 实际发音（应用韵尾音变规则，如 맛→[맏]、낮→[낟]、꽃→[꼳]、앉다→[안따]）
-- roman: 文化观光部标准罗马化（如 맛=mat、사람=saram、찌다=jjida）
-- decomp: 音素分拆，使用谚文音节块+括号语义描述，多音节用 + 连接，如 "마(接触)+ㅅ(细微渗透)" 或 "찌(强紧聚集)+르(顺滑流转)+다(动作化)"
-- analysis: 一句流畅中文，描述音韵如何流转出词义，以句号结尾
-- tags: 1-4 个分类标签（中文，空格分隔）
+请为下列词条**只生成下方列表中的字段**（不在列表中的字段不要生成）：
+${fieldList}
+
+【适用性原则】
+- 不适用的字段留空字符串/空数组/ false（例如名词没有 speechLevel/irregular，动词没有 animacy）
+- speechLevel/irregular/honorific/humble/negation 仅对用言（动词/形容词）有效
+- animacy/honNoun 仅对名词类（名词/代词/数词/依存名词）有效
+- baseForm 仅在 derivation 非空时填写
+- 词源不确定时明写「学界没有定论」，禁止编造
+- 所有枚举值必须用**简体中文**（如 动词/名词/使动/肃敬体/高频/有灵/积极 等），不要用韩文原词
 
 【词条】
 ${wordList}
 
 【输出要求】
 仅输出严格 JSON，无任何额外文字、无 markdown 代码块。格式：
-{"results":[{"hangul":"찌다","pron":"[찌다]","roman":"jjida","decomp":"찌(强紧聚集)+다(动作化)","analysis":"强力紧捏...。","tags":["烹饪","气象"]}, ...]}
+{"results":[${JSON.stringify(sampleObj)}, ...]}
 
 每个 hangul 必须与输入完全对应。`;
 }
