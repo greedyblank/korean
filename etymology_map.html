@@ -377,6 +377,7 @@
     </div>
 
     <div class="space-y-3">
+      <!-- ============ 基本信息区（始终展开） ============ -->
       <div class="grid grid-cols-2 gap-3">
         <div>
           <label class="text-xs text-slate-400 block mb-1">
@@ -409,18 +410,6 @@
                   class="w-full rounded-lg px-3 py-2 text-sm"></textarea>
       </div>
 
-      <div>
-        <label class="text-xs text-slate-400 block mb-1">音素分拆 Decomposition</label>
-        <input id="add-decomp" type="text" placeholder="例如 ㅉ(强紧捏聚集)+ㅣ(垂直尖锐)+다(动作化)"
-               class="w-full rounded-lg px-3 py-2 text-sm">
-      </div>
-
-      <div>
-        <label class="text-xs text-slate-400 block mb-1">语义流转分析 Analysis</label>
-        <textarea id="add-analysis" rows="3" placeholder="用造物主矩阵分析：辅音骨架 + 元音坐标 + 收音着陆 + 张力调节..."
-                  class="w-full rounded-lg px-3 py-2 text-sm"></textarea>
-      </div>
-
       <div class="grid grid-cols-2 gap-3">
         <div>
           <label class="text-xs text-slate-400 block mb-1">词类 Word Class</label>
@@ -439,87 +428,218 @@
         </div>
       </div>
 
-      <!-- 语法特征 -->
-      <div class="grid grid-cols-3 gap-3">
-        <div>
-          <label class="text-xs text-slate-400 block mb-1">词性 품사</label>
-          <select id="add-pos" class="w-full rounded-lg px-3 py-2 text-sm bg-black/30">
-            <option value="">— 未指定 —</option>
-            <option value="명사">명사 名词</option>
-            <option value="대명사">대명사 代词</option>
-            <option value="수사">수사 数词</option>
-            <option value="의존명사">의존명사 依存名词</option>
-            <option value="동사">동사 动词</option>
-            <option value="형용사">형용사 形容词</option>
-            <option value="관형사">관형사 冠形词</option>
-            <option value="부사">부사 副词</option>
-            <option value="조사">조사 助词</option>
-            <option value="감탄사">감탄사 感叹词</option>
-            <option value="접사">접사 接辞</option>
-          </select>
-        </div>
-        <div>
-          <label class="text-xs text-slate-400 block mb-1">阶称 말투（仅用言）</label>
-          <select id="add-speechlevel" class="w-full rounded-lg px-3 py-2 text-sm bg-black/30">
-            <option value="">— 不适用 —</option>
-            <option value="합쇼체">합쇼체 正式礼貌 (-ㅂ니다)</option>
-            <option value="해요체">해요체 非正式礼貌 (-아요)</option>
-            <option value="해라체">해라체 平语/书面 (-다)</option>
-            <option value="하게체">하게체 熟人 (하게)</option>
-            <option value="해체">해체 亲密 (어)</option>
-            <option value="하오체">하오체 古老礼貌 (-오)</option>
-            <option value="허요체">허요체 古老女性 (-여)</option>
-          </select>
-        </div>
-        <div class="flex items-end pb-2">
-          <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
-            <input id="add-honorific" type="checkbox" class="w-4 h-4 accent-[#fbbf24]">
-            <span>含敬语 <span class="text-[#fbbf24]">-시-</span></span>
-          </label>
-        </div>
-      </div>
+      <!-- ============ 词法特征区（可折叠） ============ -->
+      <details class="bg-white/[0.02] rounded-lg border border-white/10">
+        <summary class="px-3 py-2 text-xs text-slate-300 cursor-pointer select-none flex items-center gap-2">
+          <span class="text-[#a855f7] font-semibold">⚙ 词法特征</span>
+          <span class="text-slate-500">16 维语法标签（按需填写，不适用的留空）</span>
+        </summary>
+        <div class="p-3 space-y-3 border-t border-white/5">
 
-      <div class="grid grid-cols-2 gap-3">
-        <div>
-          <label class="text-xs text-slate-400 block mb-1">派生类型 파생（若适用）</label>
-          <select id="add-derivation" class="w-full rounded-lg px-3 py-2 text-sm bg-black/30">
-            <option value="">— 基本形 —</option>
-            <option value="사동">사동 使动 (먹→먹이다)</option>
-            <option value="피동">피동 被动 (잡→잡히다)</option>
-            <option value="명사화">명사화 名词化 (먹→먹기)</option>
-            <option value="동사화">동사화 动词化 (사랑→사랑하다)</option>
-            <option value="부사화">부사화 副词化 (많→많이)</option>
-            <option value="관형화">관형화 冠形化 (먹→먹은)</option>
-          </select>
+          <div class="grid grid-cols-3 gap-3">
+            <div>
+              <label class="text-xs text-slate-400 block mb-1">词性 품사</label>
+              <select id="add-pos" class="w-full rounded-lg px-3 py-2 text-sm bg-black/30">
+                <option value="">— 未指定 —</option>
+                <option value="명사">명사 名词</option>
+                <option value="대명사">대명사 代词</option>
+                <option value="수사">수사 数词</option>
+                <option value="의존명사">의존명사 依存名词</option>
+                <option value="동사">동사 动词</option>
+                <option value="형용사">형용사 形容词</option>
+                <option value="관형사">관형사 冠形词</option>
+                <option value="부사">부사 副词</option>
+                <option value="조사">조사 助词</option>
+                <option value="감탄사">감탄사 感叹词</option>
+                <option value="접사">접사 接辞</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs text-slate-400 block mb-1">阶称 말투（仅用言）</label>
+              <select id="add-speechlevel" class="w-full rounded-lg px-3 py-2 text-sm bg-black/30">
+                <option value="">— 不适用 —</option>
+                <option value="합쇼체">합쇼체 正式礼貌 (-ㅂ니다)</option>
+                <option value="해요체">해요체 非正式礼貌 (-아요)</option>
+                <option value="해라체">해라체 平语/书面 (-다)</option>
+                <option value="하게체">하게체 熟人 (하게)</option>
+                <option value="해체">해체 亲密 (어)</option>
+                <option value="하오체">하오체 古老礼貌 (-오)</option>
+                <option value="허요체">허요체 古老女性 (-여)</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs text-slate-400 block mb-1">派生类型 파생</label>
+              <select id="add-derivation" class="w-full rounded-lg px-3 py-2 text-sm bg-black/30">
+                <option value="">— 基本形 —</option>
+                <option value="사동">사동 使动 (먹→먹이다)</option>
+                <option value="피동">피동 被动 (잡→잡히다)</option>
+                <option value="명사화">명사화 名词化 (먹→먹기)</option>
+                <option value="동사화">동사화 动词化 (사랑→사랑하다)</option>
+                <option value="부사화">부사화 副词化 (많→많이)</option>
+                <option value="관형화">관형화 冠形化 (먹→먹은)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-3 gap-3">
+            <div>
+              <label class="text-xs text-slate-400 block mb-1">基本形 원형（派生来源）</label>
+              <input id="add-baseform" type="text" placeholder="例如 먹다" class="w-full rounded-lg px-3 py-2 text-sm">
+            </div>
+            <div>
+              <label class="text-xs text-slate-400 block mb-1">构词法 단어 형성</label>
+              <select id="add-wordformation" class="w-full rounded-lg px-3 py-2 text-sm bg-black/30">
+                <option value="">— 未指定 —</option>
+                <option value="단일어">단일어 单一词 (물, 가다)</option>
+                <option value="합성어">합성어 复合词 (한강물, 밤낮)</option>
+                <option value="파생어">파생어 派生词 (접미/접두)</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs text-slate-400 block mb-1">不规则活用 불규칙</label>
+              <select id="add-irregular" class="w-full rounded-lg px-3 py-2 text-sm bg-black/30">
+                <option value="">— 규칙 规则 —</option>
+                <option value="ㄷ불규칙">ㄷ불규칙 (듣→들어)</option>
+                <option value="ㅂ불규칙">ㅂ불규칙 (춥→추워)</option>
+                <option value="ㅅ불규칙">ㅅ불규칙 (짓→지어)</option>
+                <option value="ㅎ불규칙">ㅎ불규칙 (파랗→파래)</option>
+                <option value="르불규칙">르불규칙 (모르→몰라)</option>
+                <option value="우불규칙">우불규칙 (푸→펴)</option>
+                <option value="ㄹ탈락">ㄹ탈락 (살+면→사면)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-3 gap-3">
+            <div>
+              <label class="text-xs text-slate-400 block mb-1">语体 문체</label>
+              <select id="add-register" class="w-full rounded-lg px-3 py-2 text-sm bg-black/30">
+                <option value="">— 未指定 —</option>
+                <option value="구어">구어 口语</option>
+                <option value="문어">문어 书面</option>
+                <option value="공식">공식 正式</option>
+                <option value="비공식">비공식 非正式</option>
+                <option value="문어+공식">문어+공식 书面正式</option>
+                <option value="구어+비공식">구어+비공식 口语非正式</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs text-slate-400 block mb-1">词频 빈도</label>
+              <select id="add-frequency" class="w-full rounded-lg px-3 py-2 text-sm bg-black/30">
+                <option value="">— 未指定 —</option>
+                <option value="고">고빈도 高频 (top 1000)</option>
+                <option value="중">중빈도 中频</option>
+                <option value="저">저빈도 低频</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs text-slate-400 block mb-1">有灵性 유정성（仅名词）</label>
+              <select id="add-animacy" class="w-full rounded-lg px-3 py-2 text-sm bg-black/30">
+                <option value="">— 不适用 —</option>
+                <option value="유정">유정 有灵 (人/动物)</option>
+                <option value="무정">무정 无灵 (事物)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-3 gap-3">
+            <div>
+              <label class="text-xs text-slate-400 block mb-1">否定形式 부정</label>
+              <select id="add-negation" class="w-full rounded-lg px-3 py-2 text-sm bg-black/30">
+                <option value="">— 未指定 —</option>
+                <option value="긍정">긍정 肯定</option>
+                <option value="안">안 단 negation (안 가다)</option>
+                <option value="못">못 negation (못 가다)</option>
+                <option value="지 않다">지 않다 long neg</option>
+                <option value="지 못하다">지 못하다 long neg</option>
+                <option value="말다">말다 禁止 (가지 마)</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs text-slate-400 block mb-1">方言 방언</label>
+              <select id="add-dialect" class="w-full rounded-lg px-3 py-2 text-sm bg-black/30">
+                <option value="">표준어 标准语</option>
+                <option value="북한">북한 北韩</option>
+                <option value="제주">제주 济州</option>
+                <option value="경상">경상 庆尚</option>
+                <option value="전라">전라 全罗</option>
+                <option value="함경">함경 咸镜</option>
+                <option value="평안">평안 平安</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs text-slate-400 block mb-1">极性 극성</label>
+              <select id="add-polarity" class="w-full rounded-lg px-3 py-2 text-sm bg-black/30">
+                <option value="">— 未指定 —</option>
+                <option value="긍정">긍정 积极</option>
+                <option value="부정">부정 消极</option>
+                <option value="중립">중립 中性</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- 布尔字段一排 -->
+          <div class="flex flex-wrap gap-4 pt-2 border-t border-white/5">
+            <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
+              <input id="add-mimetic" type="checkbox" class="w-4 h-4 accent-[#34d399]">
+              <span>의성/의태어 <span class="text-slate-500">拟声拟态</span></span>
+            </label>
+            <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
+              <input id="add-honorific" type="checkbox" class="w-4 h-4 accent-[#fbbf24]">
+              <span>敬语 <span class="text-[#fbbf24]">-시-</span> 主语尊敬</span>
+            </label>
+            <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
+              <input id="add-humble" type="checkbox" class="w-4 h-4 accent-[#fb923c]">
+              <span>겸양말 <span class="text-[#fb923c]">谦让</span>（저/드리다/뵙다）</span>
+            </label>
+            <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
+              <input id="add-honnoun" type="checkbox" class="w-4 h-4 accent-[#a855f7]">
+              <span>높임 명사 <span class="text-[#a855f7]">敬语名词</span>（집→댁）</span>
+            </label>
+          </div>
+
         </div>
-        <div>
-          <label class="text-xs text-slate-400 block mb-1">基本形 원형（派生来源）</label>
-          <input id="add-baseform" type="text" placeholder="例如 먹이다 → 먹다" class="w-full rounded-lg px-3 py-2 text-sm">
+      </details>
+
+      <!-- ============ 深度内容区（可折叠） ============ -->
+      <details class="bg-white/[0.02] rounded-lg border border-white/10">
+        <summary class="px-3 py-2 text-xs text-slate-300 cursor-pointer select-none flex items-center gap-2">
+          <span class="text-[#fbbf24] font-semibold">📖 深度内容</span>
+          <span class="text-slate-500">音韵分析 + 词源 + 例句 + 文化背景</span>
+        </summary>
+        <div class="p-3 space-y-3 border-t border-white/5">
+          <div>
+            <label class="text-xs text-slate-400 block mb-1">音素分拆 Decomposition</label>
+            <input id="add-decomp" type="text" placeholder="例如 ㅉ(强紧捏聚集)+ㅣ(垂直尖锐)+다(动作化)"
+                   class="w-full rounded-lg px-3 py-2 text-sm">
+          </div>
+          <div>
+            <label class="text-xs text-slate-400 block mb-1">语义流转分析 Analysis（造物主矩阵）</label>
+            <textarea id="add-analysis" rows="3" placeholder="辅音骨架 + 元音坐标 + 收音着陆 + 张力调节..."
+                      class="w-full rounded-lg px-3 py-2 text-sm"></textarea>
+          </div>
+          <div>
+            <label class="text-xs text-slate-400 block mb-1">词源追溯 Etymology</label>
+            <textarea id="add-etymology" rows="3" placeholder="古韩语/中古汉语/外来源语 + 词根词缀..."
+                      class="w-full rounded-lg px-3 py-2 text-sm"></textarea>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="text-xs text-slate-400 block mb-1">相关词 Related（空格分隔）</label>
+              <input id="add-related" type="text" placeholder="찌개 찌르다 (反)익히다" class="w-full rounded-lg px-3 py-2 text-sm">
+            </div>
+            <div>
+              <label class="text-xs text-slate-400 block mb-1">历史文化背景 Cultural Note</label>
+              <input id="add-cultural" type="text" placeholder="历史/制度/宗教语境..." class="w-full rounded-lg px-3 py-2 text-sm">
+            </div>
+          </div>
+          <div>
+            <label class="text-xs text-slate-400 block mb-1">例句 Examples（每行一条，韩文 — 中文）</label>
+            <textarea id="add-examples" rows="2" placeholder="고기를 쪄서 먹었다. — 把肉蒸了吃。"
+                      class="w-full rounded-lg px-3 py-2 text-sm"></textarea>
+          </div>
         </div>
-      </div>
-
-      <div>
-        <label class="text-xs text-slate-400 block mb-1">词源追溯 Etymology（古韩语/中古汉语/外来源语 + 词根词缀）</label>
-        <textarea id="add-etymology" rows="3" placeholder="如：固有词动词 찌다，古义为「高温少量水煮熟并收汁」。学界对其词根与「찌」关联尚无定论。"
-                  class="w-full rounded-lg px-3 py-2 text-sm"></textarea>
-      </div>
-
-      <div>
-        <label class="text-xs text-slate-400 block mb-1">相关词 Related（空格分隔：同根/近义/反义）</label>
-        <input id="add-related" type="text" placeholder="例如 찌개 찌르다 삶다 (反)익히다" class="w-full rounded-lg px-3 py-2 text-sm">
-      </div>
-
-      <div>
-        <label class="text-xs text-slate-400 block mb-1">例句 Examples（每行一条，韩文 — 中文）</label>
-        <textarea id="add-examples" rows="2" placeholder="고기를 쪄서 먹었다. — 把肉蒸了吃。&#10;오늘 날씨가 정말 찐다. — 今天天气真闷。"
-                  class="w-full rounded-lg px-3 py-2 text-sm"></textarea>
-      </div>
-
-      <div>
-        <label class="text-xs text-slate-400 block mb-1">历史文化背景 Cultural Note</label>
-        <textarea id="add-cultural" rows="2" placeholder="涉及的历史时期、制度、宗教、文化语境..."
-                  class="w-full rounded-lg px-3 py-2 text-sm"></textarea>
-      </div>
+      </details>
 
       <div>
         <label class="text-xs text-slate-400 block mb-1">标签 Tags（空格分隔）</label>
@@ -1844,7 +1964,18 @@ function renderDetail() {
             ${e.pos ? `<span class="inline-block px-2 py-0.5 rounded-full ${posBadgeClass(e.pos)}">${escapeHtml(e.pos)}</span>` : ''}
             ${e.speechLevel ? `<span class="inline-block px-2 py-0.5 rounded-full bg-[#fb7185]/15 text-[#fda4af] border border-[#fb7185]/30">${escapeHtml(e.speechLevel)}</span>` : ''}
             ${e.honorific ? `<span class="inline-block px-2 py-0.5 rounded-full bg-[#fbbf24]/20 text-[#fde68a] border border-[#fbbf24]/40 font-semibold">敬 -시-</span>` : ''}
+            ${e.humble ? `<span class="inline-block px-2 py-0.5 rounded-full bg-[#fb923c]/15 text-[#fdba74] border border-[#fb923c]/30 font-semibold">谦</span>` : ''}
+            ${e.honNoun ? `<span class="inline-block px-2 py-0.5 rounded-full bg-[#a855f7]/20 text-[#d8b4fe] border border-[#a855f7]/40">敬语名词</span>` : ''}
             ${e.derivation ? `<span class="inline-block px-2 py-0.5 rounded-full bg-[#fb923c]/15 text-[#fdba74] border border-[#fb923c]/30">${escapeHtml(e.derivation)}${e.baseForm ? ` ← ${escapeHtml(e.baseForm)}` : ''}</span>` : ''}
+            ${e.wordFormation ? `<span class="inline-block px-2 py-0.5 rounded-full bg-white/5 text-slate-300 border border-white/15">${escapeHtml(e.wordFormation)}</span>` : ''}
+            ${e.irregular ? `<span class="inline-block px-2 py-0.5 rounded-full bg-[#ef4444]/15 text-[#fca5a5] border border-[#ef4444]/30" title="불규칙 활용">${escapeHtml(e.irregular)}</span>` : ''}
+            ${e.register ? `<span class="inline-block px-2 py-0.5 rounded-full bg-[#22d3ee]/15 text-[#67e8f9] border border-[#22d3ee]/30">${escapeHtml(e.register)}</span>` : ''}
+            ${e.frequency ? `<span class="inline-block px-2 py-0.5 rounded-full bg-[#10b981]/15 text-[#6ee7b7] border border-[#10b981]/30" title="빈도">${({고:'高频',중:'中频',저:'低频'})[e.frequency] || e.frequency}</span>` : ''}
+            ${e.animacy ? `<span class="inline-block px-2 py-0.5 rounded-full bg-[#facc15]/15 text-[#fef08a] border border-[#facc15]/30">${escapeHtml(e.animacy)}</span>` : ''}
+            ${e.negation && e.negation !== '긍정' ? `<span class="inline-block px-2 py-0.5 rounded-full bg-[#dc2626]/15 text-[#fca5a5] border border-[#dc2626]/30">${escapeHtml(e.negation)}</span>` : ''}
+            ${e.dialect ? `<span class="inline-block px-2 py-0.5 rounded-full bg-[#8b5cf6]/15 text-[#c4b5fd] border border-[#8b5cf6]/30" title="방언">${escapeHtml(e.dialect)}方言</span>` : ''}
+            ${e.polarity ? `<span class="inline-block px-2 py-0.5 rounded-full bg-white/5 text-slate-400 border border-white/10">${escapeHtml(e.polarity)}</span>` : ''}
+            ${e.mimetic ? `<span class="inline-block px-2 py-0.5 rounded-full bg-[#34d399]/20 text-[#6ee7b7] border border-[#34d399]/40 font-semibold" title="의성/의태어">🔊 拟声拟态</span>` : ''}
           </div>
         </div>
         <div class="flex gap-1 shrink-0">
@@ -2096,6 +2227,17 @@ function openAddModal(entry = null) {
   document.getElementById('add-honorific').checked = !!entry?.honorific;
   document.getElementById('add-derivation').value = entry?.derivation || '';
   document.getElementById('add-baseform').value = entry?.baseForm || '';
+  document.getElementById('add-wordformation').value = entry?.wordFormation || '';
+  document.getElementById('add-irregular').value = entry?.irregular || '';
+  document.getElementById('add-register').value = entry?.register || '';
+  document.getElementById('add-frequency').value = entry?.frequency || '';
+  document.getElementById('add-animacy').value = entry?.animacy || '';
+  document.getElementById('add-negation').value = entry?.negation || '';
+  document.getElementById('add-dialect').value = entry?.dialect || '';
+  document.getElementById('add-polarity').value = entry?.polarity || '';
+  document.getElementById('add-mimetic').checked = !!entry?.mimetic;
+  document.getElementById('add-humble').checked = !!entry?.humble;
+  document.getElementById('add-honnoun').checked = !!entry?.honNoun;
   document.getElementById('add-tags').value = (entry?.tags || []).join(' ');
   document.getElementById('add-notes').value = entry?.notes || '';
 
@@ -2144,6 +2286,17 @@ function saveEntry() {
     honorific: document.getElementById('add-honorific').checked,
     derivation: document.getElementById('add-derivation').value.trim(),
     baseForm: document.getElementById('add-baseform').value.trim(),
+    wordFormation: document.getElementById('add-wordformation').value.trim(),
+    irregular: document.getElementById('add-irregular').value.trim(),
+    register: document.getElementById('add-register').value.trim(),
+    frequency: document.getElementById('add-frequency').value.trim(),
+    animacy: document.getElementById('add-animacy').value.trim(),
+    negation: document.getElementById('add-negation').value.trim(),
+    dialect: document.getElementById('add-dialect').value.trim(),
+    polarity: document.getElementById('add-polarity').value.trim(),
+    mimetic: document.getElementById('add-mimetic').checked,
+    humble: document.getElementById('add-humble').checked,
+    honNoun: document.getElementById('add-honnoun').checked,
     tags: document.getElementById('add-tags').value.trim().split(/\s+/).filter(Boolean),
     notes: document.getElementById('add-notes').value.trim(),
   };
@@ -2303,6 +2456,19 @@ function buildAIEntryPrompt(input, existingTags) {
 - honorific: 布尔。该词条是否含**主语敬语 -시-** 或对应的尊敬词汇（如 계시다/말씀하다/잡수시다/성함/댁）。普通词 false。
 - derivation: 派生类型 파생。若该词条本身是派生形态，从下列选一个：사동(使动 먹→먹이다)、피동(被动 잡→잡히다)、명사화(名词化 먹→먹기/앎)、동사화(动词化 사랑→사랑하다)、부사화(副词化 많→많이)、관형화(冠形化 먹→먹은)。基本词（非派生）填空字符串 ""。
 - baseForm: 基本形 원형。**仅当 derivation 非空时**填写派生所源的基本形（如 먹이다 → "먹다"，사랑하다 → "사랑"，먹기 → "먹다"）。无派生则空字符串 ""。
+- wordFormation: 构词法 단어 형성。단일어(单纯词如 물/가다)、합성어(复合词如 한강물)、파생어(派生词如 접미/접头)。不适用空字符串。
+- irregular: 不规则活用 불규칙 활용。仅用言（동사/형용사）填写。规则填 ""，否则从下列选：ㄷ불규칙(듣→들어)、ㅂ불규칙(춥→추워)、ㅅ불규칙(짓→지어)、ㅎ불규칙(파랗→파래)、르불규칙(모르→몰라)、우불규칙(푸→펴)、ㄹ탈락(살+면→사면)。非用言空字符串。
+- register: 语体 문체。구어(口语)、문어(书面)、공식(正式)、비공식(非正式)，可组合如 "문어+공식"。不确定空字符串。
+- frequency: 词频 빈도。고(高频 top 1000)、중(中频)、저(低频)。不确定空字符串。
+- animacy: 有灵性 유정성。**仅名词类（명사/대명사/수사/의존명사）填写**。유정(人/动物)、무정(事物)。非名词空字符串。
+- negation: 否定形式 부정。仅当该词条本身是否定形态时填：안(안 가다)、못(못 가다)、지 않다、지 못하다、말다(禁止)。普通肯定词填 "" 或 "긍정"。
+- dialect: 方言 방언。标准语填 ""，否则从下列选：북한、제주、경상、전라、함경、평안。
+- polarity: 极性 극성。긍정(积极)、부정(消极)、중립(中性)。基于词义情感色彩判断。
+- mimetic: 布尔。是否为 의성어/의태어（拟声拟态词，如 반짝반짝/존존/둥글다）。
+- humble: 布尔。是否为 겸양말 谦让语（说话者自降，如 저/저희/드리다/뵙다/여쭙다/올리다）。与 honorific 是**不同维度**：honorific 抬主语，humble 降说话者。
+- honNoun: 布尔。是否为 높임 명사 敬语名词变体（如 집→댁、이름→성함、나이→연세、말→말씀、밥→진지、사람→분）。与 honorific 是不同维度。
+
+**字段适用性总原则：只填适用字段，不适用的留空/ false。一个名词通常不会有 speechLevel/irregular；一个动词通常不会有 animacy/honNoun。**
 - tags: 1-3 个标签，描述语义/语法类别。
 ${tagHint}
 【造物主矩阵参考框架】
@@ -2364,6 +2530,17 @@ ${input}
   "honorific": false,
   "derivation": "",
   "baseForm": "",
+  "wordFormation": "",
+  "irregular": "",
+  "register": "",
+  "frequency": "",
+  "animacy": "",
+  "negation": "",
+  "dialect": "",
+  "polarity": "",
+  "mimetic": false,
+  "humble": false,
+  "honNoun": false,
   "tags": []
 }`;
 }
@@ -2406,8 +2583,18 @@ async function runAINewEntry() {
     const lvlRaw = String(parsed.speechLevel || '').trim();
     const validDeriv = ['사동','피동','명사화','동사화','부사화','관형화'];
     const derivRaw = String(parsed.derivation || '').trim();
+    const validWF = ['단일어','합성어','파생어'];
+    const validIrreg = ['ㄷ불규칙','ㅂ불규칙','ㅅ불규칙','ㅎ불규칙','르불규칙','우불규칙','ㄹ탈락'];
+    const validReg = ['구어','문어','공식','비공식','문어+공식','구어+비공식'];
+    const validFreq = ['고','중','저'];
+    const validAnim = ['유정','무정'];
+    const validNeg = ['긍정','안','못','지 않다','지 못하다','말다'];
+    const validDialect = ['북한','제주','경상','전라','함경','평안'];
+    const validPol = ['긍정','부정','중립'];
+    const pick = (v, list) => list.includes(v) ? v : '';
     // 阶称仅对用言有效
     const isPredicative = posRaw === '동사' || posRaw === '형용사';
+    const isNoun = ['명사','대명사','수사','의존명사'].includes(posRaw);
     const entry = {
       hangul:    h,
       roman:     String(parsed.roman || '').trim() || romanizeHangul(h),
@@ -2422,11 +2609,22 @@ async function runAINewEntry() {
       related:   Array.isArray(parsed.related) ? parsed.related.map(t => String(t).trim()).filter(Boolean).slice(0, 12) : [],
       examples:  Array.isArray(parsed.examples) ? parsed.examples.map(t => String(t).trim()).filter(Boolean).slice(0, 5) : [],
       culturalNote: String(parsed.culturalNote || '').trim(),
-      pos:        validPos.includes(posRaw) ? posRaw : '',
-      speechLevel: (isPredicative && validLevels.includes(lvlRaw)) ? lvlRaw : '',
-      honorific:  !!parsed.honorific,
-      derivation: validDeriv.includes(derivRaw) ? derivRaw : '',
-      baseForm:   (validDeriv.includes(derivRaw) && parsed.baseForm) ? String(parsed.baseForm).trim() : '',
+      pos:           validPos.includes(posRaw) ? posRaw : '',
+      speechLevel:   (isPredicative && validLevels.includes(lvlRaw)) ? lvlRaw : '',
+      honorific:     !!parsed.honorific,
+      derivation:    pick(derivRaw, validDeriv),
+      baseForm:      (validDeriv.includes(derivRaw) && parsed.baseForm) ? String(parsed.baseForm).trim() : '',
+      wordFormation: pick(String(parsed.wordFormation || '').trim(), validWF),
+      irregular:     (isPredicative ? pick(String(parsed.irregular || '').trim(), validIrreg) : ''),
+      register:      pick(String(parsed.register || '').trim(), validReg),
+      frequency:     pick(String(parsed.frequency || '').trim(), validFreq),
+      animacy:       (isNoun ? pick(String(parsed.animacy || '').trim(), validAnim) : ''),
+      negation:      pick(String(parsed.negation || '').trim(), validNeg),
+      dialect:       pick(String(parsed.dialect || '').trim(), validDialect),
+      polarity:      pick(String(parsed.polarity || '').trim(), validPol),
+      mimetic:       !!parsed.mimetic,
+      humble:        !!parsed.humble,
+      honNoun:       !!parsed.honNoun,
       tags:      Array.isArray(parsed.tags) ? parsed.tags.map(t => String(t).trim()).filter(Boolean).slice(0, 5) : [],
     };
     _aiAddLastEntry = entry;
@@ -2597,6 +2795,17 @@ function applyAIEntry() {
     honorific: !!e.honorific,
     derivation: e.derivation || '',
     baseForm: e.baseForm || '',
+    wordFormation: e.wordFormation || '',
+    irregular: e.irregular || '',
+    register: e.register || '',
+    frequency: e.frequency || '',
+    animacy: e.animacy || '',
+    negation: e.negation || '',
+    dialect: e.dialect || '',
+    polarity: e.polarity || '',
+    mimetic: !!e.mimetic,
+    humble: !!e.humble,
+    honNoun: !!e.honNoun,
     tags: e.tags,
     notes: '',
     createdAt: Date.now(),
@@ -2638,6 +2847,17 @@ function sendAIEntryToEditor() {
   document.getElementById('add-honorific').checked = !!e.honorific;
   document.getElementById('add-derivation').value = e.derivation || '';
   document.getElementById('add-baseform').value = e.baseForm || '';
+  document.getElementById('add-wordformation').value = e.wordFormation || '';
+  document.getElementById('add-irregular').value = e.irregular || '';
+  document.getElementById('add-register').value = e.register || '';
+  document.getElementById('add-frequency').value = e.frequency || '';
+  document.getElementById('add-animacy').value = e.animacy || '';
+  document.getElementById('add-negation').value = e.negation || '';
+  document.getElementById('add-dialect').value = e.dialect || '';
+  document.getElementById('add-polarity').value = e.polarity || '';
+  document.getElementById('add-mimetic').checked = !!e.mimetic;
+  document.getElementById('add-humble').checked = !!e.humble;
+  document.getElementById('add-honnoun').checked = !!e.honNoun;
   document.getElementById('add-tags').value = (e.tags || []).join(' ');
   document.getElementById('add-notes').value = '';
   closeAIAddModal();
