@@ -99,6 +99,28 @@
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
   ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+  /* 可折叠的 header 子区块：默认展开 */
+  .header-collapsible {
+    max-height: 200px;
+    opacity: 1;
+    overflow: hidden;
+    transition: max-height 0.28s cubic-bezier(0.4,0,0.2,1),
+                opacity 0.2s ease,
+                margin 0.28s ease,
+                padding 0.28s ease;
+  }
+  .header-collapsed .header-collapsible {
+    max-height: 0;
+    opacity: 0;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    border: 0 !important;
+    pointer-events: none;
+  }
+  #header-toggle-icon { transition: transform 0.28s ease; display: inline-block; }
+  .header-collapsed #header-toggle-icon { transform: rotate(180deg); }
   .tag-pill {
     display: inline-block;
     padding: 2px 8px;
@@ -130,56 +152,62 @@
 <body class="min-h-screen">
 
 <!-- ============================== Header ============================== -->
-<header class="sticky top-0 z-40 glass border-b border-white/10">
-  <div class="max-w-[1600px] mx-auto px-4 py-3 flex flex-wrap items-center gap-4">
-    <div class="flex items-baseline gap-3">
-      <h1 class="text-2xl font-bold gradient-text">韩语词源体系地图</h1>
-      <span class="text-sm text-slate-500 font-mono">어원 지도 · Etymology Atlas</span>
+<header id="app-header" class="sticky top-0 z-40 glass border-b border-white/10">
+  <div class="max-w-[1600px] mx-auto px-4 py-2.5 flex flex-wrap items-center gap-3">
+    <div class="flex items-center gap-2 shrink-0">
+      <button id="header-toggle-btn" onclick="toggleHeaderCompact()" class="w-7 h-7 flex items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-400 hover:text-white transition" title="折叠/展开 (下滑自动折叠)">
+        <span id="header-toggle-icon">⌃</span>
+      </button>
+      <h1 class="text-xl font-bold gradient-text">韩语词源体系地图</h1>
+      <span class="text-xs text-slate-500 font-mono hidden md:inline">어원 지도</span>
     </div>
 
-    <div class="flex items-center gap-4 text-xs text-slate-400 ml-auto">
-      <div class="flex items-center gap-1.5">
-        <span class="text-[#38bdf8] font-bold text-base" id="stat-words">0</span>
-        <span>词条</span>
+    <!-- 可折叠：统计 + 操作按钮 -->
+    <div id="header-collapsible" class="header-collapsible flex flex-wrap items-center gap-3 ml-auto">
+      <div class="flex items-center gap-3 text-xs text-slate-400">
+        <div class="flex items-center gap-1">
+          <span class="text-[#38bdf8] font-bold text-sm" id="stat-words">0</span>
+          <span>词条</span>
+        </div>
+        <div class="flex items-center gap-1">
+          <span class="text-[#f43f5e] font-bold text-sm" id="stat-roots">0</span>
+          <span>词根</span>
+        </div>
+        <div class="flex items-center gap-1">
+          <span class="text-[#34d399] font-bold text-sm" id="stat-initials">0</span>
+          <span>/19 初声</span>
+        </div>
       </div>
-      <div class="flex items-center gap-1.5">
-        <span class="text-[#f43f5e] font-bold text-base" id="stat-roots">0</span>
-        <span>词根</span>
-      </div>
-      <div class="flex items-center gap-1.5">
-        <span class="text-[#34d399] font-bold text-base" id="stat-initials">0</span>
-        <span>/19 初声</span>
-      </div>
-    </div>
 
-    <div class="flex items-center gap-2">
-      <button onclick="openAddModal()" class="px-3 py-1.5 text-sm rounded-lg bg-[#38bdf8]/20 hover:bg-[#38bdf8]/30 border border-[#38bdf8]/40 text-[#7dd3fc] transition">
-        + 新词条
-      </button>
-      <button onclick="openPasteModal()" class="px-3 py-1.5 text-sm rounded-lg bg-[#f43f5e]/15 hover:bg-[#f43f5e]/25 border border-[#f43f5e]/30 text-[#fda4af] transition">
-        ♨ 批量粘贴
-      </button>
-      <button onclick="openAIModal()" id="ai-btn" class="px-3 py-1.5 text-sm rounded-lg bg-gradient-to-r from-[#a855f7]/25 to-[#ec4899]/25 hover:from-[#a855f7]/35 hover:to-[#ec4899]/35 border border-[#a855f7]/40 text-[#d8b4fe] transition">
-        ✨ AI 补全
-      </button>
-      <button onclick="openSettingsModal()" class="px-3 py-1.5 text-sm rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-400 hover:text-slate-200 transition" title="LLM 设置">
-        ⚙
-      </button>
-      <button onclick="exportJSON()" class="px-3 py-1.5 text-sm rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 transition">
-        ↓ 导出
-      </button>
-      <label class="px-3 py-1.5 text-sm rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 transition cursor-pointer">
-        ↑ 导入
-        <input type="file" accept=".json" onchange="importJSON(event)" class="hidden">
-      </label>
-      <button onclick="confirmReset()" class="px-3 py-1.5 text-sm rounded-lg bg-white/5 hover:bg-[#f43f5e]/20 border border-white/10 hover:border-[#f43f5e]/30 text-slate-400 hover:text-[#fda4af] transition">
-        ↺
-      </button>
+      <div class="flex items-center gap-1.5">
+        <button onclick="openAddModal()" class="px-2.5 py-1.5 text-xs rounded-lg bg-[#38bdf8]/20 hover:bg-[#38bdf8]/30 border border-[#38bdf8]/40 text-[#7dd3fc] transition">
+          + 新词条
+        </button>
+        <button onclick="openPasteModal()" class="px-2.5 py-1.5 text-xs rounded-lg bg-[#f43f5e]/15 hover:bg-[#f43f5e]/25 border border-[#f43f5e]/30 text-[#fda4af] transition">
+          ♨ 粘贴
+        </button>
+        <button onclick="openAIModal()" id="ai-btn" class="px-2.5 py-1.5 text-xs rounded-lg bg-gradient-to-r from-[#a855f7]/25 to-[#ec4899]/25 hover:from-[#a855f7]/35 hover:to-[#ec4899]/35 border border-[#a855f7]/40 text-[#d8b4fe] transition">
+          ✨ AI
+        </button>
+        <button onclick="openSettingsModal()" class="w-8 h-8 flex items-center justify-center text-sm rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-400 hover:text-slate-200 transition" title="LLM 设置">
+          ⚙
+        </button>
+        <button onclick="exportJSON()" class="px-2.5 py-1.5 text-xs rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 transition">
+          ↓
+        </button>
+        <label class="px-2.5 py-1.5 text-xs rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 transition cursor-pointer" title="导入 JSON">
+          ↑
+          <input type="file" accept=".json" onchange="importJSON(event)" class="hidden">
+        </label>
+        <button onclick="confirmReset()" class="w-8 h-8 flex items-center justify-center text-sm rounded-lg bg-white/5 hover:bg-[#f43f5e]/20 border border-white/10 hover:border-[#f43f5e]/30 text-slate-400 hover:text-[#fda4af] transition" title="重置">
+          ↺
+        </button>
+      </div>
     </div>
   </div>
 
-  <!-- Search bar -->
-  <div class="max-w-[1600px] mx-auto px-4 pb-3">
+  <!-- 可折叠：搜索栏 -->
+  <div id="header-search" class="header-collapsible max-w-[1600px] mx-auto px-4 pb-2.5">
     <div class="relative">
       <input id="search-input" type="text" placeholder="搜索：한글 / 拉丁化 / 释义 / 标签 / 笔记…  (快捷键 /)"
              oninput="onSearch(this.value)"
@@ -206,14 +234,14 @@
   <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 min-h-[600px]">
 
     <!-- Pane 1: Roots under selected initial -->
-    <div class="lg:col-span-3 glass rounded-2xl p-4 flex flex-col">
-      <div class="flex items-center justify-between mb-3">
+    <div class="lg:col-span-2 glass rounded-2xl p-3 flex flex-col">
+      <div class="flex items-center justify-between mb-2">
         <h3 class="text-sm font-semibold text-slate-300">
           <span id="roots-title">词根列表</span>
         </h3>
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-1.5">
           <span id="roots-count" class="text-xs text-slate-500"></span>
-          <button onclick="quickAddForInitial()" class="text-xs text-[#7dd3fc] hover:text-[#38bdf8] transition px-2 py-0.5 rounded border border-[#38bdf8]/20 hover:border-[#38bdf8]/40 hover:bg-[#38bdf8]/10" title="为当前初声添加新词">+ 新词</button>
+          <button onclick="quickAddForInitial()" class="text-xs text-[#7dd3fc] hover:text-[#38bdf8] transition px-1.5 py-0.5 rounded border border-[#38bdf8]/20 hover:border-[#38bdf8]/40 hover:bg-[#38bdf8]/10" title="为当前初声添加新词">+</button>
         </div>
       </div>
       <div id="roots-list" class="space-y-1 overflow-y-auto flex-1 max-h-[70vh]"></div>
@@ -231,7 +259,7 @@
     </div>
 
     <!-- Pane 3: Detail panel -->
-    <div class="lg:col-span-5 glass rounded-2xl p-5 flex flex-col">
+    <div class="lg:col-span-6 glass rounded-2xl p-5 flex flex-col">
       <div id="detail-panel" class="flex-1"></div>
     </div>
 
@@ -542,6 +570,37 @@ const FINALS = [
   {char:'ㅇ', core:'未满态·留白'},
 ];
 
+// 27 个终声的完整音韵象征（含复合终声）
+const FINALS_FULL = [
+  {char:'∅',  core:'发散延续·未定'},
+  {char:'ㄱ',  core:'硬性截断·卡死锁定'},
+  {char:'ㄲ',  core:'强截断·双重锁定'},
+  {char:'ㄳ',  core:'gs 复合·截断加刺'},
+  {char:'ㄴ',  core:'静态留存·向前沉淀'},
+  {char:'ㄵ',  core:'nj 复合·沉淀加聚焦'},
+  {char:'ㄶ',  core:'nh 复合·沉淀加虚化'},
+  {char:'ㄷ',  core:'硬截断·闭合定格'},
+  {char:'ㄹ',  core:'顺滑流转·持续'},
+  {char:'ㄺ',  core:'lg 复合·流转加截断'},
+  {char:'ㄻ',  core:'lm 复合·流转加实体'},
+  {char:'ㄼ',  core:'lb 复合·流转加闭合'},
+  {char:'ㄽ',  core:'ls 复合·流转加穿刺'},
+  {char:'ㄾ',  core:'lt 复合·流转加触底'},
+  {char:'ㄿ',  core:'lp 复合·流转加爆裂'},
+  {char:'ㅀ',  core:'lh 复合·流转加虚化'},
+  {char:'ㅁ',  core:'实体化·闭环名词化'},
+  {char:'ㅂ',  core:'闭合锁闭·封存'},
+  {char:'ㅄ',  core:'bs 复合·闭合加穿刺'},
+  {char:'ㅅ',  core:'穿刺停止·触底'},
+  {char:'ㅆ',  core:'强穿刺·定着'},
+  {char:'ㅇ',  core:'未满态·留白'},
+  {char:'ㅈ',  core:'聚焦定格·捏拢'},
+  {char:'ㅊ',  core:'送气冲出·定格'},
+  {char:'ㅋ',  core:'k 送气截断·爆开'},
+  {char:'ㅌ',  core:'t 触底爆开'},
+  {char:'ㅍ',  core:'p 爆裂·释放'},
+];
+
 // =========================================================================
 // 五音 + 元音 分组（用于结构化展示初声导图）
 //   传统五音：牙/舌/唇/齿/喉（按发音部位归类辅音）
@@ -687,6 +746,67 @@ function romanizeJamo(ch) {
 function autoRoman(s) {
   if (!s) return '';
   return romanizeHangul(s);
+}
+
+// 分解谚文音节 → {ini, med, fin} 索引数组（用于详情卡展示音素象征）
+function decomposeHangul(hangul) {
+  const out = [];
+  if (!hangul) return out;
+  for (const ch of hangul) {
+    const code = ch.codePointAt(0);
+    if (code < 0xAC00 || code > 0xD7A3) {
+      out.push({ raw: ch, isHangul: false });
+      continue;
+    }
+    const s = code - 0xAC00;
+    const fin = s % 28;
+    const med = Math.floor(s / 28) % 21;
+    const ini = Math.floor(s / 28 / 21);
+    out.push({
+      raw: ch, isHangul: true,
+      iniIdx: ini, medIdx: med, finIdx: fin,
+      ini: INITIALS[ini],
+      med: MEDIALS[med],
+      fin: fin > 0 ? FINALS_FULL[fin] : null,
+    });
+  }
+  return out;
+}
+
+// 把谚文字符串渲染为音素象征 pill（初/中/终声 三段）
+function phonemePillsHtml(hangul) {
+  const parts = decomposeHangul(hangul);
+  return parts.map(p => {
+    if (!p.isHangul) {
+      return `<span class="text-slate-500 text-base">${escapeHtml(p.raw)}</span>`;
+    }
+    const iniChar = p.ini?.char || '';
+    const iniCore = p.ini?.core || '';
+    const medChar = p.med?.char || '';
+    const medCore = p.med?.core || '';
+    const finChar = p.fin?.char || '';
+    const finCore = p.fin?.core || '';
+    return `
+      <div class="inline-flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5 px-2.5 py-1.5 rounded-lg bg-white/[0.04] border border-white/10" title="${escapeHtml(p.raw)}">
+        <span class="flex items-baseline gap-1">
+          <span class="text-[#38bdf8] font-bold text-base">${iniChar}</span>
+          <span class="text-[10px] text-slate-500">${escapeHtml(iniCore)}</span>
+        </span>
+        <span class="text-slate-600 text-xs">+</span>
+        <span class="flex items-baseline gap-1">
+          <span class="text-[#34d399] font-bold text-base">${medChar}</span>
+          <span class="text-[10px] text-slate-500">${escapeHtml(medCore)}</span>
+        </span>
+        ${p.finIdx > 0 ? `
+          <span class="text-slate-600 text-xs">+</span>
+          <span class="flex items-baseline gap-1">
+            <span class="text-[#f43f5e] font-bold text-base">${finChar}</span>
+            <span class="text-[10px] text-slate-500">${escapeHtml(finCore)}</span>
+          </span>
+        ` : ''}
+      </div>
+    `;
+  }).join('<span class="text-slate-700 mx-1">·</span>');
 }
 function escapeHtml(s) {
   if (s == null) return '';
@@ -1002,8 +1122,6 @@ function renderDetail() {
     return;
   }
 
-  const initIdx = getInitialIdx(e.hangul);
-  const init = initIdx !== null ? INITIALS[initIdx] : null;
   const senses = (e.meaning || '').split(/[;；]/).map(s => s.trim()).filter(Boolean);
   const tagsHtml = (e.tags || []).map(t => `<span class="tag-pill">${escapeHtml(t)}</span>`).join('');
 
@@ -1011,21 +1129,27 @@ function renderDetail() {
     <div class="fade-in">
       <!-- Header -->
       <div class="flex items-start justify-between mb-4">
-        <div>
+        <div class="min-w-0">
           <div class="flex items-baseline gap-3 flex-wrap">
             <h2 class="text-5xl font-bold text-white">${escapeHtml(e.hangul)}</h2>
             ${e.pron ? `<span class="text-lg text-[#fbbf24] font-mono">${escapeHtml(e.pron)}</span>` : ''}
             ${e.roman ? `<span class="text-base text-slate-400 font-mono">/${escapeHtml(e.roman)}/</span>` : ''}
           </div>
-          <div class="flex items-center gap-2 mt-2 text-xs text-slate-500">
-            ${init ? `<span>初声 <span class="text-[#38bdf8] font-bold text-base">${init.char}</span> · ${escapeHtml(init.core)}</span>` : ''}
-            <span class="text-slate-600">|</span>
+          <div class="flex items-center gap-2 mt-2 text-xs text-slate-500 flex-wrap">
             <span>词根 <span class="text-[#f43f5e] font-bold">${escapeHtml(e.root || getDefaultRoot(e.hangul))}</span></span>
           </div>
         </div>
-        <div class="flex gap-1">
+        <div class="flex gap-1 shrink-0">
           <button onclick="editEntry('${e.id}')" class="px-3 py-1.5 text-xs rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 transition">✎ 编辑</button>
           <button onclick="deleteEntry('${e.id}')" class="px-3 py-1.5 text-xs rounded-lg bg-[#f43f5e]/10 hover:bg-[#f43f5e]/25 border border-[#f43f5e]/30 text-[#fda4af] transition">✕ 删除</button>
+        </div>
+      </div>
+
+      <!-- 音素象征 初/中/终声 -->
+      <div class="mb-4">
+        <div class="text-xs text-slate-400 uppercase tracking-wider mb-2">音素象征 · 初声 + 中声 ${e.hangul && decomposeHangul(e.hangul).some(p => p.finIdx > 0) ? '+ 终声' : ''}</div>
+        <div class="flex flex-wrap gap-1.5">
+          ${phonemePillsHtml(e.hangul)}
         </div>
       </div>
 
@@ -2066,6 +2190,44 @@ function maybeSeedExample() {
   state.entries = seed;
   save();
 }
+
+// =========================================================================
+// HEADER 折叠（手动按钮 + 下滑自动折叠 + 上滑自动展开）
+// =========================================================================
+let _headerCompact = false;   // 当前是否折叠
+let _headerManual = false;    // 用户手动操作过（暂停自动行为）
+let _lastScrollY = window.scrollY;
+let _manualResetTimer = null;
+
+function setHeaderCompact(compact) {
+  if (_headerCompact === compact) return;
+  _headerCompact = compact;
+  document.getElementById('app-header').classList.toggle('header-collapsed', compact);
+}
+
+function toggleHeaderCompact() {
+  setHeaderCompact(!_headerCompact);
+  _headerManual = true;
+  // 8 秒后恢复自动行为，避免永久卡在用户偏好状态
+  clearTimeout(_manualResetTimer);
+  _manualResetTimer = setTimeout(() => { _headerManual = false; }, 8000);
+}
+
+window.addEventListener('scroll', () => {
+  const y = window.scrollY;
+  const dy = y - _lastScrollY;
+  if (y < 8) {
+    // 回到顶部：自动展开（除非用户刚手动操作过）
+    if (!_headerManual && _headerCompact) setHeaderCompact(false);
+  } else if (dy > 6 && y > 100) {
+    // 下滑超过阈值：自动折叠
+    if (!_headerManual && !_headerCompact) setHeaderCompact(true);
+  } else if (dy < -6) {
+    // 上滑：自动展开
+    if (!_headerManual && _headerCompact) setHeaderCompact(false);
+  }
+  _lastScrollY = y;
+}, { passive: true });
 
 // =========================================================================
 // INIT
