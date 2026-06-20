@@ -4354,6 +4354,30 @@ function collectTagsForAI() {
   }));
 }
 
+// 标准 20 大类参考体系（参考韩国国立国语院「한국어 학습용 어휘 분류」+ 中国学科门类）
+const TAG_TAXONOMY_ROOTS = [
+  '身体·健康·医疗',     // 신체·건강
+  '情感·心理·性格',     // 감정·심리
+  '人物·人际·家庭',     // 인물·관계·가족
+  '日常生活·起居',      // 일상생활
+  '饮食·烹饪·食材',     // 음식
+  '服饰·美容·外观',     // 의복·미용
+  '居住·建筑·家具',     // 주거·건축
+  '交通·出行·地点',     // 교통·이동·장소
+  '时间·季节·历法',     // 시간·계절
+  '自然·天文·地理·生物', // 자연
+  '教育·学习·知识',     // 교육·학습
+  '工作·职业·经济·商业', // 직업·경제
+  '科学·技术·方法',     // 과학·기술
+  '文化·艺术·娱乐·媒体', // 문화·예술
+  '政治·法律·社会',     // 정치·법률·사회
+  '历史·宗教·哲学·传统', // 역사·종교
+  '语言·文字·思维·逻辑', // 언어·사고
+  '抽象概念·数量·关系',  // 추상개념
+  '动作·行为·过程',     // 용언-동사
+  '状态·性质·变化',     // 용언-형용사
+];
+
 function buildTagRestructurePrompt(tagData) {
   const tagList = tagData.map((t, i) =>
     `${i+1}. ${t.tag} (${t.count}词条) — 例: ${t.samples.join(' | ')}`
@@ -4364,47 +4388,62 @@ function buildTagRestructurePrompt(tagData) {
     ? `\n【当前已有的标签图（请在此基础上优化，不要推倒重来）】\n${JSON.stringify(state.tagGraph, null, 2)}\n`
     : '';
 
-  return `你是韩语词汇语义分类专家。请根据以下标签和它们的例词，重组为一个清晰的层级标签体系。
+  const rootsList = TAG_TAXONOMY_ROOTS.map((r, i) => `   ${i+1}. ${r}`).join('\n');
+
+  return `你是韩语词汇语义分类专家，参照「韩国国立国语院 한국어 학습용 어휘 분류」与「中国学科门类」融合思路，为韩语学习者重组标签体系。
 
 【当前所有标签（带样例）】
-共 ${tagData.length} 个标签，你的输出必须**逐条对应**，不能漏掉任何一个。
+共 ${tagData.length} 个标签，**你的输出必须逐条覆盖，不能漏掉任何一个**。
 ${tagList}
 ${currentGraph}
+【参考顶级分类（共 ${TAG_TAXONOMY_ROOTS.length} 个，强制使用此 20 个为根）】
+${rootsList}
+
+规则：
+- 所有 parent 链最终必须收敛到上面 20 个根之一
+- **禁止创造新顶级**（如自创「其他」「杂项」等）
+- 看不准时按最主要语义归类；跨域词不必强行二选一，但要落进 20 根之一
+
 【任务】
-为每个标签（包括你新创建的中间层级标签）生成结构化元数据：
-- parent: 父标签名（顶级标签用 null）
-- aliases: 同义/近义标签列表（用于合并重复标签）
+为每个标签生成结构化元数据：
+- parent: 父标签名（必须是上面 20 根之一，或者另一个已存在的标签）
+- aliases: 同义/近义标签列表
 - related: 横向相关但非父子关系的标签
 
-【分类原则】
-1. **每个标签必须找到有意义的语义父级**。**禁止用「其他」「杂项」「未分类」这类万能桶**——这种桶没有检索价值。如果某标签看起来跨域，按**最主要的语义**归类即可。
-2. 推荐的顶级分类参考（可自由增删调整）：
-   - 「行为」：动作、过程（吃、走、说、做…）
-   - 「状态」：性质、情况（热、冷、累、好…）
-   - 「物体」：实体名词（食物、器物、建筑…）
-   - 「自然」：天文、地理、气象、生物（雨、山、树、狗…）
-   - 「身体」：身体部位、生理（手、头、饿、睡…）
-   - 「社会」：人际、文化、组织（家庭、学校、国家…）
-   - 「抽象」：概念、关系、数量、时间（爱、数、年、原因…）
-   - 「语言」：语法、修辞、文字（敬语、感叹、谚文…）
-3. 一个标签只能有一个 parent（避免循环）
-4. 跨域词不强行归一（如「烹饪·蒸」和「气象·闷热」可以共用「蒸」这个标签）
-5. 发现明显同义（如「烹饪」「料理」「做饭」）时，挑一个作 canonical，其余放 aliases
-6. 顶级标签控制在 6-10 个，深度一般 2-3 层
-7. **必须覆盖所有 ${tagData.length} 个输入标签**
-8. 所有出现在 parent 字段里的标签名，自身也必须在 tagGraph 里有完整条目
-9. 看到像随手记的标签（如「TODO」「重要」「待复习」），挂到「学习管理」这种有具体语义的桶下，**不要用「其他」**
+【硬性约束】
+1. **最大深度 = 2 层**（根 → 中间子类 → 叶子）。叶子到根的 parent 链长度 ≤ 2。
+   - 错误：根 A → B → C → D（4 层）
+   - 正确：根 A → B → D（D 的 parent=B，B 的 parent=A，D 到根 2 跳）
+2. **必须覆盖全部 ${tagData.length} 个输入标签**——少一个都不行
+3. **禁止使用「其他」「杂项」「未分类」「TODO」「综合」这类万能桶**作 parent
+4. 一个标签只能有一个 parent；不允许循环
+5. 标签名带 · 分隔的复合标签（如「烹饪·蒸」），按**第一义**归到对应根
+6. 同义词（如「烹饪/料理/做饭」）挑一个作 canonical，其余放 aliases
+7. 学习管理类随手标签（TODO/重要/复习）挂到「教育·学习·知识」下，不要单独立根
+
+【输出必须包含 processedTags 数组】
+在 tagGraph 同级额外输出 processedTags 数组，**逐字列出你已处理的所有输入标签名**，便于客户端比对补漏。即使你合并了某标签为 alias，也要在 processedTags 中列出原始输入名。
 
 【自检（输出前请验证）】
-- 输出条目数 >= ${tagData.length}？
-- 每个原始输入标签都在 tagGraph 里有条目？
-- 没有 parent="其他" 或类似的万能桶？
-- 所有 parent 引用都有对应条目？
-- 没有循环引用？
+- 所有叶子到根的 parent 链长度 ≤ 2？
+- 所有根都在上面 20 个中？
+- processedTags 数组长度 = ${tagData.length}？
+- 没有 parent="其他"/"杂项"/"未分类"？
+- 所有 parent 引用都在 tagGraph 或 20 根中存在？
 
 【输出要求】
 仅输出严格 JSON，无任何额外文字、markdown 代码块。格式：
-{"tagGraph":{"<标签名>":{"parent":"<父标签或null>","aliases":["<同义>"],"related":["<相关>"]}, ...}}`;
+{
+  "processedTags": ["输入标签1", "输入标签2", ...],
+  "tagGraph": {
+    "<标签名>": {
+      "parent": "<父标签名或null>",
+      "aliases": ["<同义>"],
+      "related": ["<相关>"]
+    },
+    ...
+  }
+}`;
 }
 
 async function restructureTagsWithAI() {
@@ -4413,8 +4452,10 @@ async function restructureTagsWithAI() {
     toast('还没有任何标签，先给词条加标签再让 AI 重组', 'error');
     return;
   }
-  if (!llmSettings.apiKey) {
-    toast('请先在 ⚙ 设置里填写 API Key', 'error');
+  const completionLLM = getLLMSlot('completion');
+  if (!completionLLM.apiKey) {
+    toast('请先在 ⚙ 设置里填写「补全 LLM」的 API Key', 'error');
+    activeLLMTab = 'completion';
     openSettingsModal();
     return;
   }
@@ -4426,7 +4467,7 @@ async function restructureTagsWithAI() {
 
   try {
     const prompt = buildTagRestructurePrompt(tagData);
-    const resp = await callLLM(llmSettings, prompt, 8192);
+    const resp = await callLLM(completionLLM, prompt, 8192);
     const parsed = extractJSON(resp);
     if (!parsed.tagGraph || typeof parsed.tagGraph !== 'object') {
       throw new Error('响应缺少 tagGraph 字段');
@@ -4455,6 +4496,7 @@ function showTagRestructurePreview(rawGraph) {
   });
   referencedParents.forEach(p => {
     if (!newGraph[p]) {
+      // 若 p 是 20 根之一，parent=null；否则挂到最贴近的根上（兜底）
       newGraph[p] = { parent: null, aliases: [], related: [] };
     }
   });
@@ -4469,27 +4511,117 @@ function showTagRestructurePreview(rawGraph) {
         cur = newGraph[cur] && newGraph[cur].parent;
       }
       if (cur === tag) {
-        // 循环了，断开
         newGraph[tag].parent = null;
       }
     });
   };
   breakCycles();
 
-  // 3) 漏掉的输入标签 → 提升为顶级（不用「其他」万能桶）
-  //    预览时会明显标出，让用户决定手动归类或重跑
+  // 3) ★ 硬性深度限制：任何叶子到根 > 2 跳，把它"提一档"
+  //    例：A(根) → B → C → D（D 到 A 3 跳）→ 把 D.parent 改为 B
+  const flattenDepth = (maxHops = 2) => {
+    let changed = true;
+    while (changed) {
+      changed = false;
+      Object.entries(newGraph).forEach(([tag, node]) => {
+        if (!node || !node.parent) return;
+        // 计算 tag 到根的跳数
+        const path = [];
+        let cur = tag;
+        const guard = new Set();
+        while (cur && newGraph[cur] && newGraph[cur].parent && !guard.has(cur)) {
+          guard.add(cur);
+          path.push(newGraph[cur].parent);
+          cur = newGraph[cur].parent;
+        }
+        // path.length = 该 tag 到根的跳数
+        if (path.length > maxHops) {
+          // 把 tag 的 parent 改为 path[maxHops-2]（让它离根只差 maxHops-1 跳）
+          // 例：maxHops=2, path=[B,A]（2跳）→ 不动
+          //     path=[C,B,A]（3跳）→ 改 parent 为 B（path[maxHops-2]=path[0]? no...）
+          // 实际：让 tag.parent = path[maxHops-2]?
+          // 简化：直接让 tag.parent 改为它的"祖父"
+          newGraph[tag].parent = path[1] || null;
+          changed = true;
+        }
+      });
+    }
+  };
+  flattenDepth(2);
+
+  // 4) 修复「根不在 20 标准根中」：若某节点 parent=null 但不是 20 根之一，
+  //    尝试推断挂载（按名字模糊匹配），失败则挂到「抽象概念·数量·关系」兜底
+  const rootSet = new Set(TAG_TAXONOMY_ROOTS);
+  Object.entries(newGraph).forEach(([tag, node]) => {
+    if (node && !node.parent && !rootSet.has(tag)) {
+      // 简单关键字路由
+      const t = tag.toLowerCase();
+      let bestRoot = '抽象概念·数量·关系';
+      if (/身|体|医|病|药|痛|头|手|脚|胃|睡|饿/.test(t)) bestRoot = '身体·健康·医疗';
+      else if (/情|感|绪|心|怒|喜|悲|惧|爱|恨|性|格/.test(t)) bestRoot = '情感·心理·性格';
+      else if (/人|亲|家|友|妻|夫|父|母|儿|女|哥|姐/.test(t)) bestRoot = '人物·人际·家庭';
+      else if (/吃|喝|煮|烹饪|食|饭|菜|味|料/.test(t)) bestRoot = '饮食·烹饪·食材';
+      else if (/衣|穿|化妆|裙|裤|鞋|容/.test(t)) bestRoot = '服饰·美容·外观';
+      else if (/住|房|屋|建|门|窗|桌|椅|床|家具/.test(t)) bestRoot = '居住·建筑·家具';
+      else if (/车|船|飞|路|街|走|跑|行|城|国/.test(t)) bestRoot = '交通·出行·地点';
+      else if (/时|日|月|年|春|夏|秋|冬|季节|历/.test(t)) bestRoot = '时间·季节·历法';
+      else if (/山|水|雨|风|星|月|日|树|花|草|狗|猫|鱼|鸟/.test(t)) bestRoot = '自然·天文·地理·生物';
+      else if (/学|书|教|考|知|识|字|课/.test(t)) bestRoot = '教育·学习·知识';
+      else if (/钱|买|卖|商|工|作|职|业|经|贸/.test(t)) bestRoot = '工作·职业·经济·商业';
+      else if (/数|理|化|电|算|机|技|术|方|法/.test(t)) bestRoot = '科学·技术·方法';
+      else if (/乐|歌|舞|画|影|剧|戏|玩|游/.test(t)) bestRoot = '文化·艺术·娱乐·媒体';
+      else if (/政|治|法|律|社|会|权/.test(t)) bestRoot = '政治·法律·社会';
+      else if (/史|宗|佛|儒|道|神|哲|礼/.test(t)) bestRoot = '历史·宗教·哲学·传统';
+      else if (/语|言|词|话|说|写|读|想|思/.test(t)) bestRoot = '语言·文字·思维·逻辑';
+      else if (/大|小|多|少|高|低|冷|热|好|坏|长|短|颜色|形/.test(t)) bestRoot = '状态·性质·变化';
+      else if (/做|给|拿|来|去|看|听|用|把|让/.test(t)) bestRoot = '动作·行为·过程';
+      node.parent = bestRoot;
+    }
+  });
+  // 确保 20 根本身在 graph 里都存在
+  TAG_TAXONOMY_ROOTS.forEach(r => {
+    if (!newGraph[r]) newGraph[r] = { parent: null, aliases: [], related: [] };
+  });
+
+  // 5) 漏掉的输入标签 → 也挂到最贴近的根（不用「其他」万能桶）
   const missing = inputTags.filter(t => !newGraph[t]);
   if (missing.length > 0) {
     missing.forEach(t => {
+      // 复用上面的根匹配逻辑：先空 parent，让下一轮循环归类
       newGraph[t] = { parent: null, aliases: [], related: [] };
+    });
+    // 触发第二轮根匹配
+    missing.forEach(t => {
+      const node = newGraph[t];
+      const tagLower = t.toLowerCase();
+      let bestRoot = '抽象概念·数量·关系';
+      // 同上匹配逻辑（精简版）
+      if (/身|体|医|病|药|痛|头|手|脚|睡|饿/.test(tagLower)) bestRoot = '身体·健康·医疗';
+      else if (/情|感|心|怒|喜|悲|爱|恨|性|格/.test(tagLower)) bestRoot = '情感·心理·性格';
+      else if (/人|亲|家|友|父|母|妻|夫|儿|女/.test(tagLower)) bestRoot = '人物·人际·家庭';
+      else if (/吃|喝|煮|烹饪|食|饭|菜|味/.test(tagLower)) bestRoot = '饮食·烹饪·食材';
+      else if (/衣|穿|化妆|裙|裤|鞋/.test(tagLower)) bestRoot = '服饰·美容·外观';
+      else if (/住|房|屋|建|门|窗|桌|椅|床/.test(tagLower)) bestRoot = '居住·建筑·家具';
+      else if (/车|船|路|街|走|跑|城|国/.test(tagLower)) bestRoot = '交通·出行·地点';
+      else if (/时|日|月|年|春|夏|秋|冬/.test(tagLower)) bestRoot = '时间·季节·历法';
+      else if (/山|水|雨|风|星|树|花|草|狗|猫|鱼|鸟/.test(tagLower)) bestRoot = '自然·天文·地理·生物';
+      else if (/学|书|教|考|知|字|课/.test(tagLower)) bestRoot = '教育·学习·知识';
+      else if (/钱|买|卖|商|工|作|职|业|经/.test(tagLower)) bestRoot = '工作·职业·经济·商业';
+      else if (/数|理|化|电|算|机|技|术|方|法/.test(tagLower)) bestRoot = '科学·技术·方法';
+      else if (/乐|歌|舞|画|影|剧|戏|玩|游/.test(tagLower)) bestRoot = '文化·艺术·娱乐·媒体';
+      else if (/政|治|法|律|社|会|权/.test(tagLower)) bestRoot = '政治·法律·社会';
+      else if (/史|宗|佛|儒|道|神|哲|礼/.test(tagLower)) bestRoot = '历史·宗教·哲学·传统';
+      else if (/语|言|词|话|说|写|读|想|思/.test(tagLower)) bestRoot = '语言·文字·思维·逻辑';
+      else if (/大|小|多|少|高|低|冷|热|好|坏|长|短/.test(tagLower)) bestRoot = '状态·性质·变化';
+      else if (/做|给|拿|来|去|看|听|用|把|让/.test(tagLower)) bestRoot = '动作·行为·过程';
+      node.parent = bestRoot;
     });
   }
 
-  // 4) 也把 aliases 里的标签补条目（指向 canonical）
+  // 6) 把 aliases 里的标签补条目（指向 canonical）
   Object.entries(newGraph).forEach(([canonical, node]) => {
     (node.aliases || []).forEach(a => {
       if (!newGraph[a]) {
-        // alias 本身不重复占位，但留个标记防止下次又判定为 missing
         newGraph[a] = { parent: canonical, aliases: [], related: [], _isAliasOf: canonical };
       }
     });
@@ -4502,30 +4634,37 @@ function showTagRestructurePreview(rawGraph) {
   const bucketed = missing.length;
   const aliased = Object.values(newGraph).filter(n => n._isAliasOf).length;
 
+  // 缓存 missing 给「仅补漏」按钮用
+  window._lastMissingTags = missing.slice();
+  window._lastNewGraph = newGraph;
+
   let html = `
     <div class="text-sm text-slate-300 space-y-3">
       <div class="bg-[#34d399]/10 border border-[#34d399]/30 rounded-lg p-3 text-xs">
         <div class="text-[#6ee7b7] font-semibold mb-1">AI 重组结果（已自动清洗）</div>
-        <div>共 ${Object.keys(newGraph).length} 个标签 · ${roots.length} 个顶级：${roots.map(r => `<span class="text-[#7dd3fc]">${escapeHtml(r)}</span>`).join('、')}</div>
+        <div>共 ${Object.keys(newGraph).length} 个标签 · ${roots.length} 个顶级（按 20 大类标准）</div>
         <div class="mt-1 flex flex-wrap gap-2">
           ${newKeys.length > 0 ? `<span class="text-[#34d399]">新增 ${newKeys.length}</span>` : ''}
           ${removedKeys.length > 0 ? `<span class="text-[#fda4af]">移除 ${removedKeys.length}</span>` : ''}
-          ${bucketed > 0 ? `<span class="text-[#fbbf24]">AI 漏掉 ${bucketed} 个（已留作顶级）</span>` : ''}
+          ${bucketed > 0 ? `<span class="text-[#fbbf24]">AI 漏掉 ${bucketed} 个（已按关键字兜底归类）</span>` : `<span class="text-[#34d399]">✓ 全覆盖</span>`}
           ${aliased > 0 ? `<span class="text-[#a78bfa]">${aliased} 个同义归并</span>` : ''}
         </div>
       </div>
 
       ${bucketed > 0 ? `
         <div class="bg-[#fbbf24]/10 border border-[#fbbf24]/30 rounded-lg p-3 text-xs">
-          <div class="text-[#fcd34d] font-semibold mb-1">⚠ AI 漏处理的标签（${bucketed} 个，已留作顶级）</div>
-          <div class="text-slate-400">建议点 [↻ 重跑] 让 AI 重新分类，或应用后手动调整父级：</div>
-          <div class="mt-1 text-slate-300">${missing.map(t => `<span class="inline-block px-1.5 py-0.5 mr-1 mb-1 rounded bg-white/5 text-[10px]">${escapeHtml(t)}</span>`).join('')}</div>
+          <div class="text-[#fcd34d] font-semibold mb-1">⚠ AI 漏处理的标签（${bucketed} 个，已按关键字粗归类）</div>
+          <div class="text-slate-400 mb-1">建议点 [↻ 仅补漏 ${bucketed} 个] 让 AI 专门为这些标签重新分类：</div>
+          <div class="text-slate-300">${missing.map(t => `<span class="inline-block px-1.5 py-0.5 mr-1 mb-1 rounded bg-white/5 text-[10px]">${escapeHtml(t)}</span>`).join('')}</div>
         </div>
       ` : ''}
 
-      <div class="max-h-[40vh] overflow-y-auto border border-white/10 rounded-lg p-3 bg-black/20">
-        <pre class="text-[11px] text-slate-300 whitespace-pre-wrap font-mono">${escapeHtml(JSON.stringify(newGraph, null, 2))}</pre>
-      </div>
+      <details class="border border-white/10 rounded-lg">
+        <summary class="px-3 py-2 text-xs text-slate-300 cursor-pointer hover:bg-white/5">查看完整 tagGraph JSON</summary>
+        <div class="max-h-[40vh] overflow-y-auto p-3 bg-black/20">
+          <pre class="text-[11px] text-slate-300 whitespace-pre-wrap font-mono">${escapeHtml(JSON.stringify(newGraph, null, 2))}</pre>
+        </div>
+      </details>
     </div>
   `;
 
@@ -4538,9 +4677,10 @@ function showTagRestructurePreview(rawGraph) {
         <button onclick="this.closest('.fixed').remove()" class="text-slate-400 hover:text-white">✕</button>
       </div>
       <div class="overflow-y-auto flex-1 mb-4">${html}</div>
-      <div class="flex gap-2 justify-end shrink-0">
+      <div class="flex gap-2 justify-end shrink-0 flex-wrap">
         <button onclick="this.closest('.fixed').remove()" class="px-4 py-2 text-sm rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300">取消</button>
-        <button onclick="rerunRestructure()" class="px-4 py-2 text-sm rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300" title="重新让 AI 跑一次">↻ 重跑</button>
+        <button onclick="rerunRestructure()" class="px-4 py-2 text-sm rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300" title="重新让 AI 跑一次（全部 N 个）">↻ 全部重跑</button>
+        ${bucketed > 0 ? `<button onclick="retryMissingTagsAI()" class="px-4 py-2 text-sm rounded-lg bg-[#fbbf24]/15 hover:bg-[#fbbf24]/25 border border-[#fbbf24]/40 text-[#fcd34d]" title="只让 AI 处理漏掉的 ${bucketed} 个标签">↻ 仅补漏 ${bucketed} 个</button>` : ''}
         <button id="apply-restructure-btn" class="px-4 py-2 text-sm rounded-lg bg-[#34d399]/20 hover:bg-[#34d399]/30 border border-[#34d399]/40 text-[#6ee7b7]">应用</button>
       </div>
     </div>
@@ -4555,7 +4695,7 @@ function showTagRestructurePreview(rawGraph) {
     tagBrowserState.expanded = new Set(firstRoot ? [firstRoot[0]] : []);
     renderTagBrowser();
     renderTagCloud();
-    toast(`✓ 已应用 AI 重组（${Object.keys(newGraph).length} 标签${bucketed > 0 ? `，${bucketed} 个挂入「其他」` : ''}）`, 'success');
+    toast(`✓ 已应用 AI 重组（${Object.keys(newGraph).length} 标签${bucketed > 0 ? `，${bucketed} 个按关键字兜底归类` : ''}）`, 'success');
   };
 }
 
@@ -4565,24 +4705,113 @@ function rerunRestructure() {
   setTimeout(() => restructureTagsWithAI(), 50);
 }
 
+// 仅补漏：用同样的 LLM 只让 AI 处理漏掉的标签
+async function retryMissingTagsAI() {
+  const missing = window._lastMissingTags || [];
+  if (missing.length === 0) {
+    toast('没有遗漏的标签', 'info');
+    return;
+  }
+  const completionLLM = getLLMSlot('completion');
+  if (!completionLLM.apiKey) {
+    toast('请先配置补全 LLM', 'error');
+    return;
+  }
+  // 关掉旧预览
+  document.querySelectorAll('.fixed.z-\\[60\\]').forEach(el => el.remove());
+
+  // 构造只含 missing 的 tagData
+  const allTagData = collectTagsForAI();
+  const missingTagData = allTagData.filter(t => missing.includes(t.tag));
+
+  // 简化版 prompt：只处理这 N 个，明确告诉 AI 已有 graph 上下文
+  const currentGraph = window._lastNewGraph || {};
+  const tagList = missingTagData.map((t, i) =>
+    `${i+1}. ${t.tag} (${t.count}词条) — 例: ${t.samples.join(' | ')}`
+  ).join('\n');
+  const rootsList = TAG_TAXONOMY_ROOTS.map((r, i) => `   ${i+1}. ${r}`).join('\n');
+
+  const prompt = `你之前漏掉了 ${missing.length} 个标签没分类，请只处理这些标签，把它们挂到 20 大类标准根下（可经由一个中间子类）。
+
+【待补分类的标签】
+${tagList}
+
+【20 大类标准根（必须收敛到其中之一）】
+${rootsList}
+
+【约束】
+- 最大深度 2 层（根 → 子 → 叶）
+- 只输出这 ${missing.length} 个标签的归类，不要重复输出其他已有标签
+- parent 必须是 20 根之一或已有标签
+
+【输出 JSON】
+{
+  "processedTags": [${missing.map(t => `"${t}"`).join(', ')}],
+  "tagGraph": {
+    "<标签名>": { "parent": "<父或根>", "aliases": [], "related": [] }
+  }
+}`;
+
+  const btn = event?.target;
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ 补漏中...'; }
+
+  toast(`正在让 AI 补漏 ${missing.length} 个标签...`, 'info');
+  try {
+    const resp = await callLLM(completionLLM, prompt, 4096);
+    const parsed = extractJSON(resp);
+    if (!parsed.tagGraph) throw new Error('响应缺少 tagGraph');
+    // 合并：把新结果合进 lastNewGraph，再次走预览
+    const merged = { ...(window._lastNewGraph || {}), ...parsed.tagGraph };
+    showTagRestructurePreview(merged);
+  } catch (e) {
+    toast('补漏失败：' + e.message, 'error');
+    console.error(e);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = `↻ 仅补漏 ${missing.length} 个`; }
+  }
+}
+
 function applyCompletions(batch, results) {
+  const cfg = completionConfig;
   let updated = 0;
   for (const r of (results.results || [])) {
-    // Find matching entry by hangul (first match in batch)
-    const target = batch.find(e => e.hangul === r.hangul && (
-      !e.decomp || !e.analysis || !e.pron || !e.roman || (e.tags || []).length === 0
-    ));
+    const target = batch.find(e => e.hangul === r.hangul);
     if (!target) continue;
-    // Only fill missing fields
-    if (!target.pron && r.pron) target.pron = r.pron;
-    if (!target.roman && r.roman) target.roman = r.roman;
-    if (!target.decomp && r.decomp) target.decomp = r.decomp;
-    if (!target.analysis && r.analysis) target.analysis = r.analysis;
-    if ((target.tags || []).length === 0 && r.tags && Array.isArray(r.tags)) {
-      target.tags = r.tags.slice(0, 5);
+    let changed = false;
+    for (const field of cfg.fields) {
+      const newVal = r[field];
+      // 跳过 AI 没返回的字段
+      if (newVal == null) continue;
+      // 数组/字符串空也跳过
+      const isArrEmpty = Array.isArray(newVal) && newVal.length === 0;
+      const isStrEmpty = typeof newVal === 'string' && newVal.trim() === '';
+      if (isArrEmpty || isStrEmpty) continue;
+      // 仅填空模式下，跳过已有值
+      if (cfg.onlyIfEmpty && !isFieldEmpty(target, field)) continue;
+      // ★ POS 适用性硬过滤：动词不会有 animacy、名词不会有 speechLevel 等
+      if (!_isFieldApplicable(field, target)) {
+        console.log(`[Completion] 跳过 ${target.hangul} 的 ${field}（不适用词性 ${target.pos || '未知'}）`);
+        continue;
+      }
+      // 枚举值规范化（兼容 AI 偶尔返回的韩文）
+      const finalVal = (typeof newVal === 'string') ? _normalizeEnum(field, newVal) : newVal;
+      // 布尔归一化（AI 偶尔返回 "true"/"false" 字符串）
+      const finalBool = (typeof finalVal === 'string' && (finalVal === 'true' || finalVal === 'false'))
+        ? (finalVal === 'true') : finalVal;
+      // 应用
+      if (Array.isArray(finalVal)) {
+        target[field] = finalVal.slice(0, 12);
+      } else if (typeof finalBool === 'boolean') {
+        target[field] = finalBool;
+      } else {
+        target[field] = String(finalVal).trim();
+      }
+      changed = true;
     }
-    target.updatedAt = Date.now();
-    updated++;
+    if (changed) {
+      target.updatedAt = Date.now();
+      updated++;
+    }
   }
   return updated;
 }
