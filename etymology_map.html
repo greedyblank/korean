@@ -280,6 +280,9 @@
         </h3>
         <div class="flex items-center gap-1.5">
           <span id="roots-count" class="text-xs text-slate-500"></span>
+          <button onclick="toggleSortMode()" class="sort-toggle-btn w-7 h-7 flex items-center justify-center text-xs rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-400 hover:text-slate-200 transition font-mono" title="排序方式（点击切换）">
+            <span class="sort-label">가</span>
+          </button>
           <button onclick="quickAddForInitial()" class="text-xs text-[#7dd3fc] hover:text-[#38bdf8] transition px-1.5 py-0.5 rounded border border-[#38bdf8]/20 hover:border-[#38bdf8]/40 hover:bg-[#38bdf8]/10" title="为当前初声添加新词">+</button>
         </div>
       </div>
@@ -292,7 +295,12 @@
         <h3 class="text-sm font-semibold text-slate-300">
           <span id="words-title">词条</span>
         </h3>
-        <button onclick="quickAddForCurrentRoot()" class="text-xs text-[#7dd3fc] hover:text-[#38bdf8] transition">+ 添加到此词根</button>
+        <div class="flex items-center gap-1.5">
+          <button onclick="toggleSortMode()" class="sort-toggle-btn w-7 h-7 flex items-center justify-center text-xs rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-400 hover:text-slate-200 transition font-mono" title="排序方式（点击切换）">
+            <span class="sort-label">가</span>
+          </button>
+          <button onclick="quickAddForCurrentRoot()" class="text-xs text-[#7dd3fc] hover:text-[#38bdf8] transition">+ 添加到此词根</button>
+        </div>
       </div>
       <div id="words-list" class="space-y-2 overflow-y-auto flex-1 max-h-[70vh]"></div>
     </div>
@@ -972,6 +980,28 @@ function passesVowelFilter(e) {
   return getMainVowelId(e.hangul) === state.filter.vowel;
 }
 
+// 排序模式：'hangul'（谚文 가나다）| 'roman'（罗马 A-Z）
+let sortMode = (() => {
+  try { return localStorage.getItem('korean_etymology_sort') || 'hangul'; }
+  catch (e) { return 'hangul'; }
+})();
+
+function setSortMode(mode) {
+  sortMode = mode;
+  try { localStorage.setItem('korean_etymology_sort', mode); } catch (e) {}
+  // 更新所有切换按钮的标签
+  document.querySelectorAll('.sort-toggle-btn').forEach(btn => {
+    const label = btn.querySelector('.sort-label');
+    if (label) label.textContent = mode === 'hangul' ? '가' : 'A';
+    btn.title = `当前排序：${mode === 'hangul' ? '谚文 가나다' : '罗马 A-Z'}（点击切换）`;
+  });
+}
+
+function toggleSortMode() {
+  setSortMode(sortMode === 'hangul' ? 'roman' : 'hangul');
+  render();
+}
+
 function getRootsForInitial(idx) {
   const rootsMap = new Map();  // root -> count
   state.entries.forEach(e => {
@@ -980,8 +1010,13 @@ function getRootsForInitial(idx) {
     const r = e.root || getDefaultRoot(e.hangul);
     rootsMap.set(r, (rootsMap.get(r) || 0) + 1);
   });
-  // 按谚文 Unicode 顺序排序（localeCompare ko），让相近音位的词根聚拢
-  return [...rootsMap.entries()].sort((a, b) => (a[0] || '').localeCompare(b[0] || '', 'ko'));
+  // 按当前模式排序：hangul = 가나다（同初声聚拢），roman = A-Z
+  return [...rootsMap.entries()].sort((a, b) => {
+    if (sortMode === 'roman') {
+      return romanizeHangul(a[0] || '').localeCompare(romanizeHangul(b[0] || ''), 'en');
+    }
+    return (a[0] || '').localeCompare(b[0] || '', 'ko');
+  });
 }
 function getEntriesForRoot(idx, root) {
   const list = state.entries.filter(e =>
@@ -989,8 +1024,14 @@ function getEntriesForRoot(idx, root) {
     (e.root || getDefaultRoot(e.hangul)) === root &&
     passesVowelFilter(e)
   );
-  // 按谚文排序：同词根下的词条按音节顺序聚拢
-  return list.sort((a, b) => (a.hangul || '').localeCompare(b.hangul || '', 'ko'));
+  return list.sort((a, b) => {
+    if (sortMode === 'roman') {
+      const ar = a.roman || romanizeHangul(a.hangul || '');
+      const br = b.roman || romanizeHangul(b.hangul || '');
+      return ar.localeCompare(br, 'en');
+    }
+    return (a.hangul || '').localeCompare(b.hangul || '', 'ko');
+  });
 }
 function getFilteredBySearch() {
   const q = state.filter.search.trim().toLowerCase();
@@ -2394,6 +2435,8 @@ maybeSeedExample();
 renderReferencePanel();
 render();
 updateAIButton();
+// 同步排序按钮初始标签
+setSortMode(sortMode);
 // 隐藏不支持的 TTS 控件
 if (!ttsSupported()) {
   const r = document.getElementById('tts-rate-btn');
