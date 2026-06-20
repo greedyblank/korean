@@ -198,7 +198,7 @@
     <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wider">初声导图 · Initial Consonant Atlas</h2>
     <span class="text-xs text-slate-500">按 五音（牙·舌·唇·齿·喉）+ 元音起首 分组 · 点击进入</span>
   </div>
-  <div id="initial-grid" class="space-y-3"></div>
+  <div id="initial-grid" class="space-y-2"></div>
 </section>
 
 <!-- ============================== Main 3-pane View ============================== -->
@@ -781,78 +781,71 @@ function renderInitialGrid() {
   const searchActive = !!state.filter.search.trim();
   const initialActive = !searchActive && state.filter.initialIdx !== null;
 
-  // ---- 通用按钮渲染 ----
+  // ---- 紧凑型按钮（行内 pill） ----
   const btnHtml = (char, roman, count, isActive, hasEntries, onClick, core) => {
     const classes = [
-      'initial-btn', 'glass', 'rounded-xl', 'p-2.5', 'flex', 'flex-col', 'items-center',
-      'justify-center', 'cursor-pointer', 'border', 'min-w-[64px]',
+      'initial-btn', 'rounded-lg', 'px-2.5', 'py-1.5',
+      'flex', 'items-baseline', 'gap-1.5', 'cursor-pointer', 'border',
+      'bg-white/[0.03]', 'hover:bg-white/[0.08]',
     ];
     if (isActive) classes.push('active');
     if (hasEntries) classes.push('has-entries');
     const coreAttr = core ? ` title="${escapeHtml(core)}"` : '';
     return `
       <button class="${classes.join(' ')}" ${onClick} ${coreAttr}>
-        <span class="text-2xl md:text-3xl font-bold ${hasEntries ? 'text-white' : 'text-slate-500'}">${char}</span>
-        <span class="text-[10px] text-slate-500 font-mono mt-0.5">${escapeHtml(roman)}</span>
-        <span class="text-[10px] text-slate-500 mt-0.5">${count}</span>
+        <span class="text-xl font-bold ${hasEntries ? 'text-white' : 'text-slate-500'}">${char}</span>
+        ${roman ? `<span class="text-[10px] text-slate-500 font-mono">${escapeHtml(roman)}</span>` : ''}
+        <span class="text-[10px] ${hasEntries ? 'text-[#34d399]' : 'text-slate-600'} font-mono">${count}</span>
       </button>
+    `;
+  };
+
+  // ---- 通用分组行（标签 + 按钮 + 计数） ----
+  const rowHtml = (label, sub, color, buttonsHtml, total, extraBorder) => {
+    const borderStyle = extraBorder ? `border-color:${color}40` : '';
+    return `
+      <div class="glass rounded-xl px-3 py-2 flex items-center gap-3 flex-wrap border" style="${borderStyle}">
+        <div class="flex items-baseline gap-1.5 shrink-0 min-w-[88px]">
+          <span class="text-sm font-bold" style="color:${color}">${label}</span>
+          <span class="text-[10px] text-slate-500 hidden sm:inline">${escapeHtml(sub)}</span>
+        </div>
+        <div class="flex flex-wrap items-center gap-1.5 flex-1">${buttonsHtml}</div>
+        <span class="text-[10px] text-slate-600 shrink-0 ml-auto">${total} 词条</span>
+      </div>
     `;
   };
 
   let html = '';
 
-  // ---- 五音分组渲染 ----
+  // ---- 五音分组（每行一组） ----
   INITIAL_GROUPS.forEach(group => {
     const totalForGroup = group.members.reduce((s, i) => s + counts[i], 0);
-    html += `
-      <div class="glass rounded-2xl p-3">
-        <div class="flex items-baseline justify-between mb-2 px-1">
-          <div class="flex items-baseline gap-2">
-            <span class="text-sm font-bold" style="color:${group.color}">${group.label}</span>
-            <span class="text-[10px] text-slate-500">${escapeHtml(group.sub)}</span>
-          </div>
-          <span class="text-[10px] text-slate-600">${totalForGroup} 词条</span>
-        </div>
-        <div class="flex flex-wrap gap-2">
-          ${group.members.map(i => {
-            const init = INITIALS[i];
-            const isActive = initialActive && state.filter.initialIdx === i;
-            const hasEntries = counts[i] > 0;
-            return btnHtml(init.char, romanizeJamo(init.char), counts[i],
-              isActive, hasEntries,
-              `onclick="selectInitial(${i})"`, init.core);
-          }).join('')}
-        </div>
-      </div>
-    `;
+    const buttons = group.members.map(i => {
+      const init = INITIALS[i];
+      const isActive = initialActive && state.filter.initialIdx === i;
+      const hasEntries = counts[i] > 0;
+      return btnHtml(init.char, romanizeJamo(init.char), counts[i],
+        isActive, hasEntries,
+        `onclick="selectInitial(${i})"`, init.core);
+    }).join('');
+    html += rowHtml(group.label, group.sub, group.color, buttons, totalForGroup, false);
   });
 
-  // ---- 元音起首分组（ㅇ 不发音，按 6 大主元音系展开） ----
+  // ---- 元音起首分组（ㅇ + 6 大主元音系） ----
   const yiActive = initialActive && state.filter.initialIdx === 11;
   const vowelTotal = Object.values(vowelCounts).reduce((s, n) => s + n, 0);
-  html += `
-    <div class="glass rounded-2xl p-3 border" style="border-color:rgba(167,139,250,0.25)">
-      <div class="flex items-baseline justify-between mb-2 px-1">
-        <div class="flex items-baseline gap-2">
-          <span class="text-sm font-bold text-[#a78bfa]">元音起首</span>
-          <span class="text-[10px] text-slate-500">ㅇ 词首不发音 · Vowel-initial · 按主元音系 6 组</span>
-        </div>
-        <span class="text-[10px] text-slate-600">${vowelTotal} 词条</span>
-      </div>
-      <div class="flex flex-wrap gap-2">
-        ${btnHtml('ㅇ', '(∅)', vowelTotal, yiActive && !state.filter.vowel, vowelTotal > 0,
-          `onclick="selectInitial(11)"`, '空圆喉音·词首不发音 → 全部元音起首')}
-        ${VOWEL_GROUPS.map(g => {
-          const isActive = yiActive && state.filter.vowel === g.id;
-          const hasEntries = vowelCounts[g.id] > 0;
-          return btnHtml(g.char, g.roman, vowelCounts[g.id],
-            isActive, hasEntries,
-            `onclick="selectVowelInitial('${g.id}')"`,
-            `${g.label} · ${g.desc}`);
-        }).join('')}
-      </div>
-    </div>
-  `;
+  const vowelButtons =
+    btnHtml('ㅇ', '∅', vowelTotal, yiActive && !state.filter.vowel, vowelTotal > 0,
+      `onclick="selectInitial(11)"`, '空圆喉音·词首不发音 → 全部元音起首') +
+    VOWEL_GROUPS.map(g => {
+      const isActive = yiActive && state.filter.vowel === g.id;
+      const hasEntries = vowelCounts[g.id] > 0;
+      return btnHtml(g.char, g.roman, vowelCounts[g.id],
+        isActive, hasEntries,
+        `onclick="selectVowelInitial('${g.id}')"`,
+        `${g.label} · ${g.desc}`);
+    }).join('');
+  html += rowHtml('元音起首', 'ㅇ 不发音 · 按主元音 6 系', '#a78bfa', vowelButtons, vowelTotal, true);
 
   grid.innerHTML = html;
 }
