@@ -2952,7 +2952,8 @@ function renderTagBrowser() {
 // =========================================================================
 let tagCloudState = {
   selectedTag: null,
-  expanded: new Set(),
+  expandedRoot: null,   // 当前 inline 展开的根卡片（null = 全部收起）
+  expanded: new Set(),  // 已展开根内的子树节点
 };
 
 function renderTagCloud() {
@@ -2967,57 +2968,121 @@ function renderTagCloud() {
     return;
   }
 
-  // 渲染单个节点 + 递归子树
-  const nodeHtml = (tag, depth) => {
-    const children = getTagChildren(tag);
-    const hasChildren = children.length > 0;
-    const isExpanded = tagCloudState.expanded.has(tag);
-    const isSelected = tagCloudState.selectedTag === tag;
-    const count = getTagCount(tag);
-    const node = state.tagGraph[tag] || {};
-    const aliases = node.aliases || [];
-    const indent = depth * 20;
-
-    const arrow = hasChildren
-      ? `<button onclick="event.stopPropagation(); toggleTagCloudExpand('${escapeHtml(tag).replace(/'/g,"\\'")}')" class="w-4 h-4 flex items-center justify-center text-slate-500 hover:text-slate-300 transition shrink-0">${isExpanded ? '▼' : '▶'}</button>`
-      : `<span class="w-4 h-4 inline-block shrink-0"></span>`;
-
-    const isSelectedCls = isSelected
-      ? 'bg-[#34d399]/20 border-[#34d399]/50 text-[#6ee7b7] tag-cloud-pill'
-      : 'bg-white/[0.03] border-white/10 text-slate-300 hover:border-[#34d399]/40 hover:bg-[#34d399]/10 tag-cloud-pill';
-
-    const aliasesBadge = aliases.length > 0
-      ? `<span class="text-[9px] text-[#a78bfa] ml-1" title="同义: ${escapeHtml(aliases.join(', '))}">≡${aliases.length}</span>`
-      : '';
-
-    return `
-      <div class="flex items-center gap-1 py-0.5" style="padding-left:${indent}px">
-        ${arrow}
-        <button class="${isSelectedCls} px-2 py-0.5 rounded-full text-xs border cursor-pointer transition flex items-baseline"
-                data-tag="${escapeHtml(tag)}"
-                onclick="goToTag('${escapeHtml(tag).replace(/'/g,"\\'")}', event)"
-                title="${escapeHtml(getTagChain(tag).join(' › '))} · ${count} 词条${aliases.length > 0 ? ' · 同义: ' + aliases.join(', ') : ''}">
-          <span>${escapeHtml(tag)}</span>
-          ${aliasesBadge}
-          <span class="text-slate-500 ml-1">${count}</span>
-        </button>
-      </div>
-      ${isExpanded && hasChildren ? children.map(c => nodeHtml(c, depth + 1)).join('') : ''}
-    `;
-  };
-
   const roots = getRootTags();
   const groupedRoots = roots.filter(t => state.tagGraph[t]);
   const orphanRoots = roots.filter(t => !state.tagGraph[t]);
 
-  let html = groupedRoots.map(t => nodeHtml(t, 0)).join('');
+  // === 紧凑卡片（默认状态） ===
+  const compactCardHtml = (root) => {
+    const totalCount = getTagWordsCumulative(root).length;
+    const children = getTagChildren(root);
+    const top4 = children
+      .map(c => ({ name: c, count: getTagWordsCumulative(c).length }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 4);
+    const isSelected = tagCloudState.selectedTag === root;
+    const extraKids = children.length - top4.length;
+    return `
+      <div class="rounded-lg border ${isSelected ? 'border-[#34d399]/50 bg-[#34d399]/10' : 'border-white/10 bg-white/[0.03] hover:border-[#34d399]/40 hover:bg-white/[0.06]'} px-2.5 py-1.5 cursor-pointer transition group"
+           data-root="${escapeHtml(root)}"
+           onclick="toggleTagCloudRoot('${escapeHtml(root).replace(/'/g,"\\'")}', event)">
+        <div class="flex items-baseline justify-between mb-1 gap-2">
+          <span class="text-[12px] font-semibold text-white truncate group-hover:text-[#6ee7b7] transition">${escapeHtml(root)}</span>
+          <span class="text-[10px] text-slate-500 shrink-0">${totalCount}</span>
+        </div>
+        <div class="text-[10px] leading-tight">
+          ${top4.length > 0
+            ? top4.map(c => `<span class="inline-block text-slate-500 truncate max-w-full">${escapeHtml(c.name)}<span class="text-slate-700">·${c.count}</span></span>`).join('<span class="text-slate-700 mx-0.5">·</span>')
+            : `<span class="italic text-slate-600">无子标签</span>`}
+          ${extraKids > 0 ? `<span class="text-slate-700 ml-1">+${extraKids}</span>` : ''}
+        </div>
+      </div>
+    `;
+  };
+
+  // === 展开卡片（点根后 inline 展开） ===
+  const expandedCardHtml = (root) => {
+    const totalCount = getTagWordsCumulative(root).length;
+    const directCount = getTagWords(root).length;
+    const isSelected = tagCloudState.selectedTag === root;
+    const children = getTagChildren(root);
+    const node = state.tagGraph[root] || {};
+    const aliases = node.aliases || [];
+
+    // 递归渲染子节点为 inline pill 流；子树换行 + 左边框缩进
+    const renderNode = (tag, depth) => {
+      const kids = getTagChildren(tag);
+      const hasKids = kids.length > 0;
+      const isExp = tagCloudState.expanded.has(tag);
+      const isSel = tagCloudState.selectedTag === tag;
+      const cum = getTagWordsCumulative(tag).length;
+      const dir = getTagWords(tag).length;
+      const childNode = state.tagGraph[tag] || {};
+      const childAliases = childNode.aliases || [];
+      const arrow = hasKids
+        ? `<span class="text-[8px] text-slate-500 hover:text-slate-200 cursor-pointer mr-0.5 transition" onclick="event.stopPropagation(); toggleTagCloudExpand('${escapeHtml(tag).replace(/'/g,"\\'")}')">${isExp ? '▾' : '▸'}</span>`
+        : '';
+      const selCls = isSel
+        ? 'bg-[#34d399]/25 border-[#34d399]/60 text-[#6ee7b7]'
+        : 'bg-white/[0.04] border-white/10 text-slate-300 hover:border-[#34d399]/40 hover:bg-[#34d399]/10';
+      const aliasesBadge = childAliases.length > 0
+        ? `<span class="text-[8px] text-[#a78bfa] ml-0.5" title="同义: ${escapeHtml(childAliases.join(', '))}">≡${childAliases.length}</span>`
+        : '';
+      return `
+        <span class="inline-flex items-baseline">
+          ${arrow}
+          <button class="${selCls} px-1.5 py-0 rounded-full text-[10px] border cursor-pointer transition flex items-baseline tag-cloud-pill leading-relaxed"
+                  data-tag="${escapeHtml(tag)}"
+                  onclick="goToTag('${escapeHtml(tag).replace(/'/g,"\\'")}', event)"
+                  title="${escapeHtml(getTagChain(tag).join(' › '))} · 累计 ${cum}${dir < cum ? ` / 直接 ${dir}` : ''}${childAliases.length > 0 ? ' · 同义: ' + childAliases.join(', ') : ''}">
+            <span>${escapeHtml(tag)}</span>
+            ${aliasesBadge}
+            <span class="text-slate-600 ml-0.5 text-[9px]">${cum}</span>
+          </button>
+        </span>
+        ${isExp && hasKids ? `
+          <span class="flex flex-wrap gap-0.5 pl-3 ml-1 border-l border-[#34d399]/20 mb-1">
+            ${kids.map(c => renderNode(c, depth + 1)).join('')}
+          </span>
+        ` : ''}
+      `;
+    };
+
+    return `
+      <div class="col-span-2 sm:col-span-3 md:col-span-4 lg:col-span-5 rounded-lg border border-[#34d399]/40 bg-[#34d399]/[0.04] px-3 py-2 shadow-[0_0_18px_rgba(52,211,153,0.08)]">
+        <div class="flex items-baseline justify-between mb-1.5 pb-1 border-b border-white/10 gap-2 flex-wrap">
+          <button onclick="toggleTagCloudRoot('${escapeHtml(root).replace(/'/g,"\\'")}', event)"
+                  class="text-sm font-bold ${isSelected ? 'text-[#6ee7b7]' : 'text-white'} hover:text-[#34d399] transition flex items-center gap-1">
+            <span class="text-slate-500 text-xs">▾</span>
+            <span>${escapeHtml(root)}</span>
+            ${aliases.length > 0 ? `<span class="text-[9px] text-[#a78bfa] font-normal">≡${aliases.length}</span>` : ''}
+          </button>
+          <div class="text-[10px] text-slate-500 flex items-baseline gap-1.5">
+            <span>累计 <span class="text-slate-300 font-semibold">${totalCount}</span></span>
+            ${directCount > 0 ? `<span class="text-slate-700">· 直接 ${directCount}</span>` : ''}
+          </div>
+        </div>
+        <div class="flex flex-wrap gap-0.5 items-baseline max-h-[28vh] overflow-y-auto pr-1">
+          ${children.length > 0
+            ? children.map(c => renderNode(c, 0)).join('')
+            : `<div class="italic text-slate-600 text-[10px]">该根暂无子标签（词条直接挂在根上）</div>`}
+        </div>
+      </div>
+    `;
+  };
+
+  // 组装
+  let html = '';
+  groupedRoots.forEach(root => {
+    html += (root === tagCloudState.expandedRoot) ? expandedCardHtml(root) : compactCardHtml(root);
+  });
   if (orphanRoots.length > 0) {
-    html += `<div class="text-[10px] text-slate-600 mt-2 px-1 uppercase tracking-wider">未分组 (${orphanRoots.length})</div>`;
-    html += orphanRoots.map(t => nodeHtml(t, 0)).join('');
+    html += `<div class="col-span-2 sm:col-span-3 md:col-span-4 lg:col-span-5 text-[10px] text-slate-600 mt-2 px-1 uppercase tracking-wider">未分组 (${orphanRoots.length})</div>`;
+    html += orphanRoots.map(t => compactCardHtml(t)).join('');
   }
   cloud.innerHTML = html;
 
-  // 展开选中标签的迷你词条列表（含子代累计）
+  // === 底部词条列表（选中任何标签后显示） ===
   if (tagCloudState.selectedTag) {
     const tag = tagCloudState.selectedTag;
     const directWords = getTagWords(tag);
@@ -3051,7 +3116,6 @@ function renderTagCloud() {
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-1.5">
           ${allWords.map(e => {
             const senses = (e.meaning || '').split(/[;　?？]/)[0];
-            // 标注本词条是直接挂当前 tag 还是从子代继承
             const directHit = (e.tags || []).includes(tag);
             return `
               <div onclick="selectEntryAndScroll('${e.id}')" class="cursor-pointer px-2.5 py-1.5 rounded-lg bg-white/[0.03] hover:bg-white/[0.08] border border-white/5 hover:border-[#34d399]/30 transition">
@@ -3071,6 +3135,21 @@ function renderTagCloud() {
   } else {
     detail.classList.add('hidden');
   }
+}
+
+// 切换根卡片的展开/收起
+function toggleTagCloudRoot(root, event) {
+  if (event) event.stopPropagation();
+  if (tagCloudState.expandedRoot === root) {
+    // 收起
+    tagCloudState.expandedRoot = null;
+  } else {
+    // 展开（同时选中该根 + 自动展开第一层子节点）
+    tagCloudState.expandedRoot = root;
+    tagCloudState.selectedTag = root;
+    getTagChildren(root).forEach(c => tagCloudState.expanded.add(c));
+  }
+  renderTagCloud();
 }
 
 function toggleTagCloudExpand(tag) {
@@ -3103,18 +3182,29 @@ function goToTag(tag, event) {
     return;
   }
   tagCloudState.selectedTag = (tagCloudState.selectedTag === tag) ? null : tag;
-  // 自动展开父链
+  // 自动展开父链 + 自动展开所在根卡片
   if (tagCloudState.selectedTag) {
-    getTagChain(tagCloudState.selectedTag).forEach(t => tagCloudState.expanded.add(t));
+    const chain = getTagChain(tagCloudState.selectedTag);
+    chain.forEach(t => tagCloudState.expanded.add(t));
+    // 找到根（chain[0]）并 inline 展开
+    if (chain.length > 0) {
+      const root = chain[0];
+      if (tagCloudState.expandedRoot !== root) {
+        tagCloudState.expandedRoot = root;
+        getTagChildren(root).forEach(c => tagCloudState.expanded.add(c));
+      }
+    }
   }
   renderTagCloud();
   if (tagCloudState.selectedTag) {
-    const pill = document.querySelector(`.tag-cloud-pill[data-tag="${CSS.escape(tag)}"]`);
-    if (pill) {
-      pill.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      pill.classList.add('tag-pulse');
-      setTimeout(() => pill.classList.remove('tag-pulse'), 1200);
-    }
+    setTimeout(() => {
+      const pill = document.querySelector(`.tag-cloud-pill[data-tag="${CSS.escape(tag)}"]`);
+      if (pill) {
+        pill.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        pill.classList.add('tag-pulse');
+        setTimeout(() => pill.classList.remove('tag-pulse'), 1200);
+      }
+    }, 60);
   }
 }
 
