@@ -439,6 +439,65 @@
         </div>
       </div>
 
+      <!-- 语法特征 -->
+      <div class="grid grid-cols-3 gap-3">
+        <div>
+          <label class="text-xs text-slate-400 block mb-1">词性 품사</label>
+          <select id="add-pos" class="w-full rounded-lg px-3 py-2 text-sm bg-black/30">
+            <option value="">— 未指定 —</option>
+            <option value="명사">명사 名词</option>
+            <option value="대명사">대명사 代词</option>
+            <option value="수사">수사 数词</option>
+            <option value="의존명사">의존명사 依存名词</option>
+            <option value="동사">동사 动词</option>
+            <option value="형용사">형용사 形容词</option>
+            <option value="관형사">관형사 冠形词</option>
+            <option value="부사">부사 副词</option>
+            <option value="조사">조사 助词</option>
+            <option value="감탄사">감탄사 感叹词</option>
+            <option value="접사">접사 接辞</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs text-slate-400 block mb-1">阶称 말투（仅用言）</label>
+          <select id="add-speechlevel" class="w-full rounded-lg px-3 py-2 text-sm bg-black/30">
+            <option value="">— 不适用 —</option>
+            <option value="합쇼체">합쇼체 正式礼貌 (-ㅂ니다)</option>
+            <option value="해요체">해요체 非正式礼貌 (-아요)</option>
+            <option value="해라체">해라체 平语/书面 (-다)</option>
+            <option value="하게체">하게체 熟人 (하게)</option>
+            <option value="해체">해체 亲密 (어)</option>
+            <option value="하오체">하오체 古老礼貌 (-오)</option>
+            <option value="허요체">허요체 古老女性 (-여)</option>
+          </select>
+        </div>
+        <div class="flex items-end pb-2">
+          <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
+            <input id="add-honorific" type="checkbox" class="w-4 h-4 accent-[#fbbf24]">
+            <span>含敬语 <span class="text-[#fbbf24]">-시-</span></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-xs text-slate-400 block mb-1">派生类型 파생（若适用）</label>
+          <select id="add-derivation" class="w-full rounded-lg px-3 py-2 text-sm bg-black/30">
+            <option value="">— 基本形 —</option>
+            <option value="사동">사동 使动 (먹→먹이다)</option>
+            <option value="피동">피동 被动 (잡→잡히다)</option>
+            <option value="명사화">명사화 名词化 (먹→먹기)</option>
+            <option value="동사화">동사화 动词化 (사랑→사랑하다)</option>
+            <option value="부사화">부사화 副词化 (많→많이)</option>
+            <option value="관형화">관형화 冠形化 (먹→먹은)</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs text-slate-400 block mb-1">基本形 원형（派生来源）</label>
+          <input id="add-baseform" type="text" placeholder="例如 먹이다 → 먹다" class="w-full rounded-lg px-3 py-2 text-sm">
+        </div>
+      </div>
+
       <div>
         <label class="text-xs text-slate-400 block mb-1">词源追溯 Etymology（古韩语/中古汉语/外来源语 + 词根词缀）</label>
         <textarea id="add-etymology" rows="3" placeholder="如：固有词动词 찌다，古义为「高温少量水煮熟并收汁」。学界对其词根与「찌」关联尚无定论。"
@@ -1782,6 +1841,10 @@ function renderDetail() {
             <span>词根 <span class="text-[#f43f5e] font-bold">${escapeHtml(e.root || getDefaultRoot(e.hangul))}</span></span>
             ${e.wordClass ? `<span class="inline-block px-2 py-0.5 rounded-full bg-[#a855f7]/15 text-[#d8b4fe] border border-[#a855f7]/30">${escapeHtml(e.wordClass)}</span>` : ''}
             ${e.hanja ? `<span class="inline-block px-2 py-0.5 rounded-full bg-[#38bdf8]/15 text-[#7dd3fc] border border-[#38bdf8]/30 font-serif">${escapeHtml(e.hanja)}</span>` : ''}
+            ${e.pos ? `<span class="inline-block px-2 py-0.5 rounded-full ${posBadgeClass(e.pos)}">${escapeHtml(e.pos)}</span>` : ''}
+            ${e.speechLevel ? `<span class="inline-block px-2 py-0.5 rounded-full bg-[#fb7185]/15 text-[#fda4af] border border-[#fb7185]/30">${escapeHtml(e.speechLevel)}</span>` : ''}
+            ${e.honorific ? `<span class="inline-block px-2 py-0.5 rounded-full bg-[#fbbf24]/20 text-[#fde68a] border border-[#fbbf24]/40 font-semibold">敬 -시-</span>` : ''}
+            ${e.derivation ? `<span class="inline-block px-2 py-0.5 rounded-full bg-[#fb923c]/15 text-[#fdba74] border border-[#fb923c]/30">${escapeHtml(e.derivation)}${e.baseForm ? ` ← ${escapeHtml(e.baseForm)}` : ''}</span>` : ''}
           </div>
         </div>
         <div class="flex gap-1 shrink-0">
@@ -2028,6 +2091,11 @@ function openAddModal(entry = null) {
   document.getElementById('add-related').value = (entry?.related || []).join(' ');
   document.getElementById('add-examples').value = (entry?.examples || []).join('\n');
   document.getElementById('add-cultural').value = entry?.culturalNote || '';
+  document.getElementById('add-pos').value = entry?.pos || '';
+  document.getElementById('add-speechlevel').value = entry?.speechLevel || '';
+  document.getElementById('add-honorific').checked = !!entry?.honorific;
+  document.getElementById('add-derivation').value = entry?.derivation || '';
+  document.getElementById('add-baseform').value = entry?.baseForm || '';
   document.getElementById('add-tags').value = (entry?.tags || []).join(' ');
   document.getElementById('add-notes').value = entry?.notes || '';
 
@@ -2071,6 +2139,11 @@ function saveEntry() {
     related: document.getElementById('add-related').value.trim().split(/\s+/).filter(Boolean),
     examples: document.getElementById('add-examples').value.split('\n').map(s => s.trim()).filter(Boolean),
     culturalNote: document.getElementById('add-cultural').value.trim(),
+    pos: document.getElementById('add-pos').value.trim(),
+    speechLevel: document.getElementById('add-speechlevel').value.trim(),
+    honorific: document.getElementById('add-honorific').checked,
+    derivation: document.getElementById('add-derivation').value.trim(),
+    baseForm: document.getElementById('add-baseform').value.trim(),
     tags: document.getElementById('add-tags').value.trim().split(/\s+/).filter(Boolean),
     notes: document.getElementById('add-notes').value.trim(),
   };
@@ -2212,19 +2285,24 @@ function buildAIEntryPrompt(input, existingTags) {
 - wordClass: 上述五类之一
 - hanja: 若为汉字词，给出对应汉字（如 사랑→"愛"、산→"山"、불안→"不安"）；否则空字符串 ""
 - root: 词根（默认 hangul 第一个音节）
-- decomp: 音素分拆，如 "ㅉ+ㅣ+ㄷㅏ"（每音节的初/中/终声拆开，多音节用空格连接）
-- analysis: **重点**。基于「造物主矩阵」的音韵物理分析 100-200 字。
+- decomp: 音素分拆，是造物主矩阵的简单版，如：物品基础价值（비）向外膨胀，产生了让人紧绷、肉痛的撕裂感（싸），状态固化成修饰语（ㄴ）
+- analysis: **重点**。基于「造物主矩阵」的音韵物理分析 20-80 字（尽量简短，可适当换行）。
     * 若 wordClass=固有韩语：必须用矩阵拆解"为什么这样发音"——依次说明辅音骨架（19 初声）、元音坐标（21 中声）、收音着陆（27 终声）、张力调节（平/紧/送气）、可能的元音交替（Ablaut）。
     * 若 wordClass=汉字词：不要硬套矩阵。简述汉字音进入韩语后的音变规则即可。
     * 若 wordClass=外来语：不要硬套矩阵。说明源语发音 + 韩语音系适配规则。
-- etymology: **重点**。词源追溯 150-300 字。
+- etymology: **重点**。词源追溯 100-200 字（尽量简短，可适当换行）。
     * 固有韩语：尽量追溯到古代韩语 (Old Korean) / 中世韩语 (Middle Korean) 或可考历史形式；不确定就明确写"学界没有定论"。分析词根/词缀/语音演变。**重点解释为什么这个词根如此发音**。
     * 汉字词：拆解每个汉字的语义功能 + 中古汉语/古汉语来源 + 与现代汉语/日语汉字词的异同。
     * 外来语：说明来源语言（英/日/中/葡…）+ 进入韩语后的音变 + 意义变化 + 使用场景。
     * 若涉及中国古代制度、佛教、儒学、科举、官僚制度、近代日本造词、现代英语翻译词，请在 etymology 或 culturalNote 里指出。
-- related: 4-8 个相关词数组（同根词、近义词、反义词、常见搭配、派生词、固定表达、成语、俗语）。反义词请加 "(反)" 前缀。
-- examples: 2-3 个典型例句字符串数组。每条格式 "韩文 — 中文翻译"，韩文部分给读者展示典型语法/敬语/搭配。
+- related: 4-8 个相关词数组（同根词、近义词、反义词、常见搭配、派生词、固定表达、成语、俗语）。反义词请加 "(反)" 前缀（只需要拉丁化注音）。
+- examples: 2-3 个典型例句字符串数组。每条格式 "韩文 — 中文翻译"，韩文部分给读者展示典型语法/敬语/搭配（无需注音）。
 - culturalNote: 历史/制度/文化背景，可涉及三国/新罗/高丽/朝鲜王朝/日据/现代；佛教/儒学/科举/去汉字化/谚文化/K-pop 等。无则空字符串 ""。
+- pos: 词性 품사。必须从以下 11 个中选最贴切者（体词填 명사/대명사/수사/의존명사，用言填 동사/형용사，修饰语填 관형사/부사，独立填 감탄사，关系填 조사，派生语素填 접사）。
+- speechLevel: 阶称 말투。**仅对动词/形容词（동사/형용사）填写**；其余词性一律空字符串。从 7 个传统阶称中选：합쇼체(正式礼貌 -ㅂ니다)、해요체(非正式礼貌 -아요,现代默认)、해라체(平语/书面 -다)、하게체(熟人 -네/게)、해체(亲密 -어)、하오체(古老礼貌 -오)、허요체(古老女性 -여)。以 hangul 给出的形态来判断，不要按个人偏好。
+- honorific: 布尔。该词条是否含**主语敬语 -시-** 或对应的尊敬词汇（如 계시다/말씀하다/잡수시다/성함/댁）。普通词 false。
+- derivation: 派生类型 파생。若该词条本身是派生形态，从下列选一个：사동(使动 먹→먹이다)、피동(被动 잡→잡히다)、명사화(名词化 먹→먹기/앎)、동사화(动词化 사랑→사랑하다)、부사화(副词化 많→많이)、관형화(冠形化 먹→먹은)。基本词（非派生）填空字符串 ""。
+- baseForm: 基本形 원형。**仅当 derivation 非空时**填写派生所源的基本形（如 먹이다 → "먹다"，사랑하다 → "사랑"，먹기 → "먹다"）。无派生则空字符串 ""。
 - tags: 1-3 个标签，描述语义/语法类别。
 ${tagHint}
 【造物主矩阵参考框架】
@@ -2281,6 +2359,11 @@ ${input}
   "related": [],
   "examples": [],
   "culturalNote": "",
+  "pos": "",
+  "speechLevel": "",
+  "honorific": false,
+  "derivation": "",
+  "baseForm": "",
   "tags": []
 }`;
 }
@@ -2317,6 +2400,14 @@ async function runAINewEntry() {
     const h = String(parsed.hangul).trim();
     const validClasses = ['固有韩语','汉字词','外来语','混合词','新造词'];
     const wcRaw = String(parsed.wordClass || '').trim();
+    const validPos = ['명사','대명사','수사','의존명사','동사','형용사','관형사','부사','조사','감탄사','접사'];
+    const posRaw = String(parsed.pos || '').trim();
+    const validLevels = ['합쇼체','해요체','해라체','하게체','해체','하오체','허요체'];
+    const lvlRaw = String(parsed.speechLevel || '').trim();
+    const validDeriv = ['사동','피동','명사화','동사화','부사화','관형화'];
+    const derivRaw = String(parsed.derivation || '').trim();
+    // 阶称仅对用言有效
+    const isPredicative = posRaw === '동사' || posRaw === '형용사';
     const entry = {
       hangul:    h,
       roman:     String(parsed.roman || '').trim() || romanizeHangul(h),
@@ -2331,6 +2422,11 @@ async function runAINewEntry() {
       related:   Array.isArray(parsed.related) ? parsed.related.map(t => String(t).trim()).filter(Boolean).slice(0, 12) : [],
       examples:  Array.isArray(parsed.examples) ? parsed.examples.map(t => String(t).trim()).filter(Boolean).slice(0, 5) : [],
       culturalNote: String(parsed.culturalNote || '').trim(),
+      pos:        validPos.includes(posRaw) ? posRaw : '',
+      speechLevel: (isPredicative && validLevels.includes(lvlRaw)) ? lvlRaw : '',
+      honorific:  !!parsed.honorific,
+      derivation: validDeriv.includes(derivRaw) ? derivRaw : '',
+      baseForm:   (validDeriv.includes(derivRaw) && parsed.baseForm) ? String(parsed.baseForm).trim() : '',
       tags:      Array.isArray(parsed.tags) ? parsed.tags.map(t => String(t).trim()).filter(Boolean).slice(0, 5) : [],
     };
     _aiAddLastEntry = entry;
@@ -2366,6 +2462,18 @@ function renderAIEntryPreview(entry) {
     : '';
   const hanjaBadge = entry.hanja
     ? `<span class="inline-block text-sm px-2 py-0.5 rounded-full bg-[#38bdf8]/15 text-[#7dd3fc] border border-[#38bdf8]/30 font-serif">${escapeHtml(entry.hanja)}</span>`
+    : '';
+  const posBadge = entry.pos
+    ? `<span class="inline-block text-[11px] px-2 py-0.5 rounded-full ${posBadgeClass(entry.pos)}">${escapeHtml(entry.pos)}</span>`
+    : '';
+  const lvlBadge = entry.speechLevel
+    ? `<span class="inline-block text-[11px] px-2 py-0.5 rounded-full bg-[#fb7185]/15 text-[#fda4af] border border-[#fb7185]/30">${escapeHtml(entry.speechLevel)}</span>`
+    : '';
+  const honBadge = entry.honorific
+    ? `<span class="inline-block text-[11px] px-2 py-0.5 rounded-full bg-[#fbbf24]/20 text-[#fde68a] border border-[#fbbf24]/40 font-semibold">敬 -시-</span>`
+    : '';
+  const derivBadge = entry.derivation
+    ? `<span class="inline-block text-[11px] px-2 py-0.5 rounded-full bg-[#fb923c]/15 text-[#fdba74] border border-[#fb923c]/30">${escapeHtml(entry.derivation)}${entry.baseForm ? ` ← ${escapeHtml(entry.baseForm)}` : ''}</span>`
     : '';
 
   // 相关词云
@@ -2403,7 +2511,7 @@ function renderAIEntryPreview(entry) {
         ${entry.pron ? `<span class="text-xs text-[#fbbf24] font-mono">${escapeHtml(entry.pron)}</span>` : ''}
       </div>
       <div class="flex items-center gap-1.5 mb-3 flex-wrap">
-        ${wcBadge}${hanjaBadge}
+        ${wcBadge}${hanjaBadge}${posBadge}${lvlBadge}${honBadge}${derivBadge}
         ${entry.root ? `<span class="text-[10px] text-slate-500">词根 <span class="text-[#a78bfa] font-bold">${escapeHtml(entry.root)}</span></span>` : ''}
       </div>
 
@@ -2484,6 +2592,11 @@ function applyAIEntry() {
     related: e.related || [],
     examples: e.examples || [],
     culturalNote: e.culturalNote || '',
+    pos: e.pos || '',
+    speechLevel: e.speechLevel || '',
+    honorific: !!e.honorific,
+    derivation: e.derivation || '',
+    baseForm: e.baseForm || '',
     tags: e.tags,
     notes: '',
     createdAt: Date.now(),
@@ -2520,6 +2633,11 @@ function sendAIEntryToEditor() {
   document.getElementById('add-related').value = (e.related || []).join(' ');
   document.getElementById('add-examples').value = (e.examples || []).join('\n');
   document.getElementById('add-cultural').value = e.culturalNote || '';
+  document.getElementById('add-pos').value = e.pos || '';
+  document.getElementById('add-speechlevel').value = e.speechLevel || '';
+  document.getElementById('add-honorific').checked = !!e.honorific;
+  document.getElementById('add-derivation').value = e.derivation || '';
+  document.getElementById('add-baseform').value = e.baseForm || '';
   document.getElementById('add-tags').value = (e.tags || []).join(' ');
   document.getElementById('add-notes').value = '';
   closeAIAddModal();
@@ -2956,6 +3074,19 @@ function jumpToHangul(hangul) {
     const dp = document.getElementById('detail-panel');
     if (dp) dp.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }, 50);
+}
+
+// 词性徽章配色（按词类大组）
+function posBadgeClass(pos) {
+  const SUBSTANTIVE = ['명사','대명사','수사','의존명사']; // 体言 - 蓝
+  const PREDICATIVE  = ['동사','형용사'];                  // 用言 - 绿
+  const MODIFIER     = ['관형사','부사'];                  // 修饰 - 黄
+  const OTHER        = ['조사','감탄사','접사'];            // 关系/独立 - 灰
+  if (SUBSTANTIVE.includes(pos)) return 'bg-[#38bdf8]/15 text-[#7dd3fc] border border-[#38bdf8]/30';
+  if (PREDICATIVE.includes(pos))  return 'bg-[#34d399]/15 text-[#6ee7b7] border border-[#34d399]/30';
+  if (MODIFIER.includes(pos))     return 'bg-[#fbbf24]/15 text-[#fde68a] border border-[#fbbf24]/30';
+  if (OTHER.includes(pos))        return 'bg-white/5 text-slate-400 border border-white/15';
+  return 'bg-white/5 text-slate-400 border border-white/15';
 }
 
 function addNewTag() {
