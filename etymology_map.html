@@ -2264,23 +2264,19 @@ document.addEventListener('keydown', (e) => {
 
   if (e.key === '/') {
     e.preventDefault();
-    // 若 header 已折叠，先展开再聚焦（否则搜索框不可见）
-    if (_headerCompact) {
-      setHeaderCompact(false);
-      _headerManual = true;
-      clearTimeout(_manualResetTimer);
-      _manualResetTimer = setTimeout(() => { _headerManual = false; }, 8000);
-    }
+    expandHeaderIfCollapsed();
     document.getElementById('search-input').focus();
     return;
   }
   if (e.key === 'n' || e.key === 'N') {
     e.preventDefault();
+    expandHeaderIfCollapsed();
     openAddModal();
     return;
   }
   if (e.key === 'p' || e.key === 'P') {
     e.preventDefault();
+    expandHeaderIfCollapsed();
     openPasteModal();
     return;
   }
@@ -2361,6 +2357,16 @@ function toggleHeaderCompact() {
   // 8 秒后恢复自动行为，避免永久卡在用户偏好状态
   clearTimeout(_manualResetTimer);
   _manualResetTimer = setTimeout(() => { _headerManual = false; }, 8000);
+}
+
+// 快捷键触达 header 内功能时，若已折叠则先展开（/、N、P 等共用）
+function expandHeaderIfCollapsed() {
+  if (_headerCompact) {
+    setHeaderCompact(false);
+    _headerManual = true;
+    clearTimeout(_manualResetTimer);
+    _manualResetTimer = setTimeout(() => { _headerManual = false; }, 8000);
+  }
 }
 
 window.addEventListener('scroll', () => {
