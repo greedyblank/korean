@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>韩语固有词全量推演图谱</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Noto+Sans+KR:wght@300;400;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet" />
+    
+    <style>
+        :root {
+            --bg-color: #050810;
+            --card-bg: rgba(15, 23, 42, 0.4);
+            --card-border: rgba(56, 189, 248, 0.15);
+        }
+
+        body {
+            font-family: 'Inter', 'Noto Sans KR', sans-serif;
+            background-color: var(--bg-color);
+            color: #f8fafc;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(56, 189, 248, 0.03), transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(192, 132, 252, 0.03), transparent 25%);
+            background-attachment: fixed;
+        }
+
+        .glass-panel {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--card-border);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .hangul { font-family: 'Noto Sans KR', sans-serif; }
+        .roman { font-family: 'JetBrains Mono', monospace; font-size: 0.85em; color: #94a3b8; }
+
+        .text-gradient {
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .gradient-primary { background-image: linear-gradient(135deg, #38bdf8, #c084fc); }
+
+        .reveal {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .reveal.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .word-pill {
+            display: inline-flex;
+            align-items: baseline;
+            gap: 6px;
+            padding: 4px 10px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+        .word-pill:hover {
+            background: rgba(255,255,255,0.1);
+            border-color: rgba(255,255,255,0.3);
+            transform: translateY(-2px);
+        }
+
+        /* Progress bar */
+        #scroll-progress {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #38bdf8, #c084fc);
+            z-index: 100;
+            transition: width 0.1s;
+        }
+    </style>
+</head>
+<body class="antialiased selection:bg-[#38bdf8] selection:text-white pb-20">
+
+    <div id="scroll-progress" style="width: 0%;"></div>
+
+    <header class="relative pt-20 pb-12 px-6 text-center max-w-6xl mx-auto reveal">
+        <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 text-sm font-semibold mb-6">
+            <span class="material-symbols-outlined text-[18px]">warning</span>
+            核心规则界定：本图谱仅适用于【固有词 Native Korean】，汉字词绝不适用此物理映射！
+        </div>
+        <h1 class="text-4xl md:text-6xl font-black mb-6 tracking-tight leading-tight">
+            韩语造物主矩阵<br/>
+            <span class="text-gradient gradient-primary">【全量暴走穷尽版】</span>
+        </h1>
+        <p class="text-slate-400 text-md md:text-lg max-w-4xl mx-auto leading-relaxed">
+            没有任何克扣。从首辅音的起势、元音的阴阳空间、介音的扭曲矢量，到收音的坠落结局。这里记录了对话中出现过的<strong>所有发音、所有组合、所有词汇实例</strong>。
+        </p>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col gap-12">
+
+        <section class="reveal">
+            <div class="flex items-center gap-4 mb-6 border-b border-slate-800 pb-4">
+                <div class="w-12 h-12 rounded-xl bg-[#38bdf8]/10 border border-[#38bdf8]/30 text-[#38bdf8] flex items-center justify-center text-2xl">🦴</div>
+                <h2 class="text-3xl font-bold text-white tracking-tight">【第一层】首辅音宇宙 (19起势)：物理触感与动作地图</h2>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                
+                <!-- 唇音家族 -->
+                <div class="glass-panel rounded-2xl p-6 border-l-4 border-l-[#fbbf24]">
+                    <h3 class="text-xl font-bold text-white mb-3">👄 唇音家族 (ㅁ, ㅂ, ㅃ, ㅍ)</h3>
+                    <p class="text-sm text-[#fbbf24] mb-4">核心：包容、容器、平面、爆裂、向外发散</p>
+                    <div class="space-y-4">
+                        <div>
+                            <strong class="text-[#fbbf24] hangul text-lg">ㅁ (m)</strong> <span class="text-slate-400 text-xs">〔闭合/容器/水状物/聚集〕</span>
+                            <div class="flex flex-wrap gap-2 mt-2">
+                                <span class="word-pill"><strong class="text-white">물</strong> <span class="roman">[mul]</span> 水</span>
+                                <span class="word-pill"><strong class="text-white">모으다</strong> <span class="roman">[mo-eu-da]</span> 收集</span>
+                                <span class="word-pill"><strong class="text-white">마음/맘</strong> <span class="roman">[ma-eum/mam]</span> 心</span>
+                                <span class="word-pill"><strong class="text-white">몸</strong> <span class="roman">[mom]</span> 身体</span>
+                                <span class="word-pill"><strong class="text-white">말</strong> <span class="roman">[mal]</span> 话语</span>
+                                <span class="word-pill"><strong class="text-white">맛</strong> <span class="roman">[mat]</span> 味道</span>
+                                <span class="word-pill"><strong class="text-white">마디</strong> <span class="roman">[ma-di]</span> 节/段</span>
+                                <span class="word-pill"><strong class="text-white">머리</strong> <span class="roman">[meo-ri]</span> 头</span>
+                                <span class="word-pill"><strong class="text-white">밀다</strong> <span class="roman">[mil-da]</span> 推</span>
+                                <span class="word-pill"><strong class="text-white">묻다</strong> <span class="roman">[mut-da]</span> 埋/问</span>
+                                <span class="word-pill"><strong class="text-white">묵</strong> <span class="roman">[muk]</span> 凝胶物</span>
+                                <span class="word-pill"><strong class="text-white">멍</strong> <span class="roman">[meong]</span> 淤青</span>
+                                <span class="word-pill"><strong class="text-white">마당</strong> <span class="roman">[ma-dang]</span> 庭院</span>
+                                <span class="word-pill"><strong class="text-white">먹다</strong> <span class="roman">[meok-da]</span> 吃</span>
+                            </div>
+                        </div>
+                        <div>
+                            <strong class="text-[#fbbf24] hangul text-lg">ㅂ (b)</strong> <span class="text-slate-400 text-xs">〔平面/基础/张开/接触〕</span>
+                            <div class="flex flex-wrap gap-2 mt-2">
+                                <span class="word-pill"><strong class="text-white">바닥</strong> <span class="roman">[ba-dak]</span> 底部</span>
+                                <span class="word-pill"><strong class="text-white">벽</strong> <span class="roman">[byeok]</span> 墙壁</span>
+                                <span class="word-pill"><strong class="text-white">발</strong> <span class="roman">[bal]</span> 脚</span>
+                                <span class="word-pill"><strong class="text-white">바다</strong> <span class="roman">[ba-da]</span> 海</span>
+                                <span class="word-pill"><strong class="text-white">밝다</strong> <span class="roman">[balk-da]</span> 明亮</span>
+                                <span class="word-pill"><strong class="text-white">바라다</strong> <span class="roman">[ba-ra-da]</span> 期盼</span>
+                                <span class="word-pill"><strong class="text-white">불</strong> <span class="roman">[bul]</span> 火</span>
+                                <span class="word-pill"><strong class="text-white">부풀다</strong> <span class="roman">[bu-pul-da]</span> 膨胀</span>
+                                <span class="word-pill"><strong class="text-white">방</strong> <span class="roman">[bang]</span> 房间</span>
+                                <span class="word-pill"><strong class="text-white">버리다</strong> <span class="roman">[beo-ri-da]</span> 丢弃</span>
+                                <span class="word-pill"><strong class="text-white">보다</strong> <span class="roman">[bo-da]</span> 看</span>
+                                <span class="word-pill"><strong class="text-white">비비다</strong> <span class="roman">[bi-bi-da]</span> 擦/揉</span>
+                                <span class="word-pill"><strong class="text-white">붙다</strong> <span class="roman">[but-da]</span> 粘</span>
+                                <span class="word-pill"><strong class="text-white">부딪히다</strong> <span class="roman">[bu-di-chi-da]</span> 碰撞</span>
+                            </div>
+                        </div>
+                        <div>
+                            <strong class="text-[#fbbf24] hangul text-lg">ㅃ/ㅍ (pp/p)</strong> <span class="text-slate-400 text-xs">〔极度压缩 / 剧烈爆裂扩散〕</span>
+                            <div class="flex flex-wrap gap-2 mt-2">
+                                <span class="word-pill"><strong class="text-white">빠르다</strong> <span class="roman">[ppa-reu-da]</span> 快</span>
+                                <span class="word-pill"><strong class="text-white">빨다</strong> <span class="roman">[ppal-da]</span> 吸/洗</span>
+                                <span class="word-pill"><strong class="text-white">파다</strong> <span class="roman">[pa-da]</span> 挖</span>
+                                <span class="word-pill"><strong class="text-white">파도</strong> <span class="roman">[pa-do]</span> 波浪</span>
+                                <span class="word-pill"><strong class="text-white">피</strong> <span class="roman">[pi]</span> 血</span>
+                                <span class="word-pill"><strong class="text-white">피다</strong> <span class="roman">[pi-da]</span> 开花</span>
+                                <span class="word-pill"><strong class="text-white">파랗다</strong> <span class="roman">[pa-rah-da]</span> 蓝</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 舌根家族 -->
+                <div class="glass-panel rounded-2xl p-6 border-l-4 border-l-[#38bdf8]">
+                    <h3 class="text-xl font-bold text-white mb-3">📐 舌根家族 (ㄱ, ㄲ, ㅋ)</h3>
+                    <p class="text-sm text-[#38bdf8] mb-4">核心：边缘、折角、硬壳、切割、阻碍</p>
+                    <div class="space-y-4">
+                        <div>
+                            <strong class="text-[#38bdf8] hangul text-lg">ㄱ (g/k)</strong> <span class="text-slate-400 text-xs">〔边缘/转折/硬度/界限〕</span>
+                            <div class="flex flex-wrap gap-2 mt-2">
+                                <span class="word-pill"><strong class="text-white">가다</strong> <span class="roman">[ga-da]</span> 去</span>
+                                <span class="word-pill"><strong class="text-white">가장</strong> <span class="roman">[ga-jang]</span> 最</span>
+                                <span class="word-pill"><strong class="text-white">갓</strong> <span class="roman">[gat]</span> 边缘/帽</span>
+                                <span class="word-pill"><strong class="text-white">갈다</strong> <span class="roman">[gal-da]</span> 磨/耕</span>
+                                <span class="word-pill"><strong class="text-white">거두다</strong> <span class="roman">[geo-du-da]</span> 收割</span>
+                                <span class="word-pill"><strong class="text-white">걸다</strong> <span class="roman">[geol-da]</span> 挂</span>
+                                <span class="word-pill"><strong class="text-white">겁</strong> <span class="roman">[geop]</span> 怯懦</span>
+                                <span class="word-pill"><strong class="text-white">끝</strong> <span class="roman">[kkeut]</span> 尽头</span>
+                                <span class="word-pill"><strong class="text-white">구부리다</strong> <span class="roman">[gu-bu-ri-da]</span> 弯曲</span>
+                                <span class="word-pill"><strong class="text-white">공</strong> <span class="roman">[gong]</span> 球</span>
+                                <span class="word-pill"><strong class="text-white">긋다</strong> <span class="roman">[geut-da]</span> 划线</span>
+                                <span class="word-pill"><strong class="text-white">굳다</strong> <span class="roman">[gut-da]</span> 凝固</span>
+                                <span class="word-pill"><strong class="text-white">거늘다</strong> <span class="roman">[geo-neul-da]</span> 连/挂</span>
+                                <span class="word-pill"><strong class="text-white">고리</strong> <span class="roman">[go-ri]</span> 钩子</span>
+                                <span class="word-pill"><strong class="text-white">구멍</strong> <span class="roman">[gu-meong]</span> 洞孔</span>
+                                <span class="word-pill"><strong class="text-white">기둥</strong> <span class="roman">[gi-dung]</span> 柱子</span>
+                                <span class="word-pill"><strong class="text-white">그리다</strong> <span class="roman">[geu-ri-da]</span> 画/描</span>
+                                <span class="word-pill"><strong class="text-white">가르다</strong> <span class="roman">[ga-reu-da]</span> 分开</span>
+                            </div>
+                        </div>
+                        <div>
+                            <strong class="text-[#38bdf8] hangul text-lg">ㄲ/ㅋ (kk/k)</strong> <span class="text-slate-400 text-xs">〔极硬外壳/暴力切割 / 巨大裂口扩张〕</span>
+                            <div class="flex flex-wrap gap-2 mt-2">
+                                <span class="word-pill"><strong class="text-white">껍질</strong> <span class="roman">[kkeop-jil]</span> 壳/皮</span>
+                                <span class="word-pill"><strong class="text-white">꺾다</strong> <span class="roman">[kkeok-da]</span> 折断</span>
+                                <span class="word-pill"><strong class="text-white">까다</strong> <span class="roman">[kka-da]</span> 剥开</span>
+                                <span class="word-pill"><strong class="text-white">깎다</strong> <span class="roman">[kkak-da]</span> 削</span>
+                                <span class="word-pill"><strong class="text-white">크다</strong> <span class="roman">[keu-da]</span> 大</span>
+                                <span class="word-pill"><strong class="text-white">캐다</strong> <span class="roman">[kae-da]</span> 挖掘</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 舌尖与流音家族 -->
+                <div class="glass-panel rounded-2xl p-6 border-l-4 border-l-[#34d399] lg:col-span-2">
+                    <h3 class="text-xl font-bold text-white mb-3">👅 舌尖与流音家族 (ㄴ, ㄷ, ㄸ, ㅌ, ㄹ)</h3>
+                    <p class="text-sm text-[#34d399] mb-4">核心：大地、落脚、软硬连接、时间流逝、动能循环</p>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div>
+                            <strong class="text-[#34d399] hangul text-lg">ㄴ (n)</strong> <span class="text-slate-400 text-xs">〔内生/软连接/时间流〕</span>
+                            <div class="flex flex-wrap gap-2 mt-2">
+                                <span class="word-pill"><strong class="text-white">나</strong> <span class="roman">[na]</span> 我</span>
+                                <span class="word-pill"><strong class="text-white">날</strong> <span class="roman">[nal]</span> 日/刃</span>
+                                <span class="word-pill"><strong class="text-white">나라</strong> <span class="roman">[na-ra]</span> 国家</span>
+                                <span class="word-pill"><strong class="text-white">누</strong> <span class="roman">[nu]</span> 谁/累</span>
+                                <span class="word-pill"><strong class="text-white">눈</strong> <span class="roman">[nun]</span> 眼/雪</span>
+                                <span class="word-pill"><strong class="text-white">늪</strong> <span class="roman">[neup]</span> 沼泽</span>
+                                <span class="word-pill"><strong class="text-white">내리다</strong> <span class="roman">[nae-ri-da]</span> 降下</span>
+                                <span class="word-pill"><strong class="text-white">넘다</strong> <span class="roman">[neom-da]</span> 超过</span>
+                                <span class="word-pill"><strong class="text-white">늦다</strong> <span class="roman">[neut-da]</span> 迟/晚</span>
+                                <span class="word-pill"><strong class="text-white">놓다</strong> <span class="roman">[noh-da]</span> 放下</span>
+                                <span class="word-pill"><strong class="text-white">너르다</strong> <span class="roman">[neo-reu-da]</span> 宽广</span>
+                                <span class="word-pill"><strong class="text-white">노리다</strong> <span class="roman">[no-ri-da]</span> 瞄准</span>
+                                <span class="word-pill"><strong class="text-white">누르다</strong> <span class="roman">[nu-reu-da]</span> 压</span>
+                            </div>
+                        </div>
+                        <div>
+                            <strong class="text-[#34d399] hangul text-lg">ㄷ/ㄸ (d/tt)</strong> <span class="text-slate-400 text-xs">〔坚实接触/点对点/稳固地基〕</span>
+                            <div class="flex flex-wrap gap-2 mt-2">
+                                <span class="word-pill"><strong class="text-white">돌</strong> <span class="roman">[dol]</span> 石头</span>
+                                <span class="word-pill"><strong class="text-white">닫다</strong> <span class="roman">[dat-da]</span> 关门</span>
+                                <span class="word-pill"><strong class="text-white">닿다</strong> <span class="roman">[dah-da]</span> 触碰</span>
+                                <span class="word-pill"><strong class="text-white">두다</strong> <span class="roman">[du-da]</span> 放置</span>
+                                <span class="word-pill"><strong class="text-white">들다</strong> <span class="roman">[deul-da]</span> 进/拿</span>
+                                <span class="word-pill"><strong class="text-white">다다르다</strong> <span class="roman">[da-da-reu-da]</span> 抵达</span>
+                                <span class="word-pill"><strong class="text-white">다르다</strong> <span class="roman">[da-reu-da]</span> 不同</span>
+                                <span class="word-pill"><strong class="text-white">더하다</strong> <span class="roman">[deo-ha-da]</span> 增加</span>
+                                <span class="word-pill"><strong class="text-white">도리다</strong> <span class="roman">[do-ri-da]</span> 雕刻</span>
+                                <span class="word-pill"><strong class="text-white">디디다</strong> <span class="roman">[di-di-da]</span> 踏</span>
+                                <span class="word-pill"><strong class="text-white">땅</strong> <span class="roman">[ttang]</span> 大地</span>
+                                <span class="word-pill"><strong class="text-white">뜨다</strong> <span class="roman">[tteu-da]</span> 升/睁</span>
+                                <span class="word-pill"><strong class="text-white">뚫다</strong> <span class="roman">[ttulh-da]</span> 穿透</span>
+                            </div>
+                        </div>
+                        <div>
+                            <strong class="text-[#34d399] hangul text-lg">ㄹ (r/l)</strong> <span class="text-slate-400 text-xs">〔无阻碍流转/动能延续/线态〕</span>
+                            <div class="flex flex-wrap gap-2 mt-2">
+                                <span class="word-pill"><strong class="text-white">흐르다</strong> <span class="roman">[heu-reu-da]</span> 流淌</span>
+                                <span class="word-pill"><strong class="text-white">구르다</strong> <span class="roman">[gu-reu-da]</span> 滚动</span>
+                                <span class="word-pill"><strong class="text-white">~리다</strong> <span class="roman">[-ri-da]</span> 使动流转</span>
+                                <span class="word-pill"><strong class="text-white">~랑</strong> <span class="roman">[-rang]</span> 连结并置</span>
+                                <span class="word-pill"><strong class="text-white">~러</strong> <span class="roman">[-reo]</span> 动作延伸</span>
+                                <span class="word-pill"><strong class="text-white">라사</strong> <span class="roman">[ra-sa]</span> 罗/网状</span>
+                                <span class="word-pill"><strong class="text-white">로</strong> <span class="roman">[ro]</span> 路径/方向</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 牙齿/摩擦家族 -->
+                <div class="glass-panel rounded-2xl p-6 border-l-4 border-l-[#f472b6]">
+                    <h3 class="text-xl font-bold text-white mb-3">🦷 牙齿/摩擦家族 (ㅅ, ㅆ, ㅈ, ㅉ, ㅊ)</h3>
+                    <p class="text-sm text-[#f472b6] mb-4">核心：缝隙、渗透、尖锐个体、精准对焦</p>
+                    <div class="space-y-4">
+                        <div>
+                            <strong class="text-[#f472b6] hangul text-lg">ㅅ/ㅆ (s/ss)</strong> <span class="text-slate-400 text-xs">〔细分/生命实体/渗透漏出 / 剧烈摩擦〕</span>
+                            <div class="flex flex-wrap gap-2 mt-2">
+                                <span class="word-pill"><strong class="text-white">새</strong> <span class="roman">[sae]</span> 鸟/新</span>
+                                <span class="word-pill"><strong class="text-white">사이</strong> <span class="roman">[sa-i]</span> 间隙</span>
+                                <span class="word-pill"><strong class="text-white">스며들다</strong> <span class="roman">[seu-myeo-deul-da]</span> 渗透</span>
+                                <span class="word-pill"><strong class="text-white">살</strong> <span class="roman">[sal]</span> 肉/生</span>
+                                <span class="word-pill"><strong class="text-white">살다</strong> <span class="roman">[sal-da]</span> 活</span>
+                                <span class="word-pill"><strong class="text-white">사람</strong> <span class="roman">[sa-ram]</span> 人</span>
+                                <span class="word-pill"><strong class="text-white">사랑</strong> <span class="roman">[sa-rang]</span> 爱</span>
+                                <span class="word-pill"><strong class="text-white">사내</strong> <span class="roman">[sa-nae]</span> 男人</span>
+                                <span class="word-pill"><strong class="text-white">서다</strong> <span class="roman">[seo-da]</span> 站立</span>
+                                <span class="word-pill"><strong class="text-white">수다</strong> <span class="roman">[su-da]</span> 絮叨/刺入</span>
+                                <span class="word-pill"><strong class="text-white">시다</strong> <span class="roman">[si-da]</span> 酸/刺痛</span>
+                                <span class="word-pill"><strong class="text-white">쏟다</strong> <span class="roman">[ssot-da]</span> 倾倒</span>
+                                <span class="word-pill"><strong class="text-white">쏘다</strong> <span class="roman">[sso-da]</span> 射击</span>
+                                <span class="word-pill"><strong class="text-white">쓰다</strong> <span class="roman">[sseu-da]</span> 写/苦/戴</span>
+                            </div>
+                        </div>
+                        <div>
+                            <strong class="text-[#f472b6] hangul text-lg">ㅈ/ㅉ/ㅊ (j/jj/ch)</strong> <span class="text-slate-400 text-xs">〔收拢对准 / 极致榨取 / 突进切穿〕</span>
+                            <div class="flex flex-wrap gap-2 mt-2">
+                                <span class="word-pill"><strong class="text-white">잡다</strong> <span class="roman">[jap-da]</span> 抓住</span>
+                                <span class="word-pill"><strong class="text-white">작다</strong> <span class="roman">[jak-da]</span> 小</span>
+                                <span class="word-pill"><strong class="text-white">자르다</strong> <span class="roman">[ja-reu-da]</span> 切割</span>
+                                <span class="word-pill"><strong class="text-white">자다</strong> <span class="roman">[ja-da]</span> 睡觉</span>
+                                <span class="word-pill"><strong class="text-white">지다</strong> <span class="roman">[ji-da]</span> 落下/输</span>
+                                <span class="word-pill"><strong class="text-white">주다</strong> <span class="roman">[ju-da]</span> 给予</span>
+                                <span class="word-pill"><strong class="text-white">조이다</strong> <span class="roman">[jo-i-da]</span> 收紧</span>
+                                <span class="word-pill"><strong class="text-white">저미다</strong> <span class="roman">[jeo-mi-da]</span> 切碎</span>
+                                <span class="word-pill"><strong class="text-white">짜다</strong> <span class="roman">[jja-da]</span> 挤/咸</span>
+                                <span class="word-pill"><strong class="text-white">치다</strong> <span class="roman">[chi-da]</span> 击打</span>
+                                <span class="word-pill"><strong class="text-white">솟구치다</strong> <span class="roman">[sot-gu-chi-da]</span> 冲天</span>
+                                <span class="word-pill"><strong class="text-white">차다</strong> <span class="roman">[cha-da]</span> 踢/满</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 喉音与虚空家族 -->
+                <div class="glass-panel rounded-2xl p-6 border-l-4 border-l-[#c084fc]">
+                    <h3 class="text-xl font-bold text-white mb-3">🕳️ 喉音与虚空家族 (ㅇ, ㅎ)</h3>
+                    <p class="text-sm text-[#c084fc] mb-4">核心：无阻碍、圆满、容器内空、气流散发</p>
+                    <div class="space-y-4">
+                        <div>
+                            <strong class="text-[#c084fc] hangul text-lg">ㅇ (ng/0)</strong> <span class="text-slate-400 text-xs">〔圆周/内部虚空/原始诞生态〕</span>
+                            <div class="flex flex-wrap gap-2 mt-2">
+                                <span class="word-pill"><strong class="text-white">안</strong> <span class="roman">[an]</span> 内部</span>
+                                <span class="word-pill"><strong class="text-white">원</strong> <span class="roman">[won]</span> 圆</span>
+                                <span class="word-pill"><strong class="text-white">알</strong> <span class="roman">[al]</span> 蛋/颗粒</span>
+                                <span class="word-pill"><strong class="text-white">오르다</strong> <span class="roman">[o-reu-da]</span> 上升</span>
+                                <span class="word-pill"><strong class="text-white">우울</strong> <span class="roman">[u-ul]</span> 阴郁</span>
+                                <span class="word-pill"><strong class="text-white">아기</strong> <span class="roman">[a-gi]</span> 婴儿</span>
+                                <span class="word-pill"><strong class="text-white">어기다</strong> <span class="roman">[eo-gi-da]</span> 违背</span>
+                                <span class="word-pill"><strong class="text-white">우리</strong> <span class="roman">[u-ri]</span> 我们/圈</span>
+                                <span class="word-pill"><strong class="text-white">이</strong> <span class="roman">[i]</span> 牙齿/点</span>
+                                <span class="word-pill"><strong class="text-white">알다</strong> <span class="roman">[al-da]</span> 知道</span>
+                                <span class="word-pill"><strong class="text-white">안다</strong> <span class="roman">[an-da]</span> 抱</span>
+                                <span class="word-pill"><strong class="text-white">얼음</strong> <span class="roman">[eo-reum]</span> 冰</span>
+                                <span class="word-pill"><strong class="text-white">웃음</strong> <span class="roman">[u-seum]</span> 笑</span>
+                                <span class="word-pill"><strong class="text-white">앎</strong> <span class="roman">[alm]</span> 知识</span>
+                            </div>
+                        </div>
+                        <div>
+                            <strong class="text-[#c084fc] hangul text-lg">ㅎ (h)</strong> <span class="text-slate-400 text-xs">〔能量耗散/气流释放/消散化〕</span>
+                            <div class="flex flex-wrap gap-2 mt-2">
+                                <span class="word-pill"><strong class="text-white">하늘</strong> <span class="roman">[ha-neul]</span> 天空</span>
+                                <span class="word-pill"><strong class="text-white">한숨</strong> <span class="roman">[han-sum]</span> 叹息</span>
+                                <span class="word-pill"><strong class="text-white">흐르다</strong> <span class="roman">[heu-reu-da]</span> 流逝</span>
+                                <span class="word-pill"><strong class="text-white">희다</strong> <span class="roman">[hui-da]</span> 变白/虚化</span>
+                                <span class="word-pill"><strong class="text-white">허리</strong> <span class="roman">[heo-ri]</span> 腰/中空处</span>
+                                <span class="word-pill"><strong class="text-white">호리다</strong> <span class="roman">[ho-ri-da]</span> 诱惑</span>
+                                <span class="word-pill"><strong class="text-white">후리다</strong> <span class="roman">[hu-ri-da]</span> 挥舞/掠夺</span>
+                                <span class="word-pill"><strong class="text-white">하다</strong> <span class="roman">[ha-da]</span> 做/动作发出</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="reveal">
+            <div class="flex items-center gap-4 mb-6 border-b border-slate-800 pb-4">
+                <div class="w-12 h-12 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 flex items-center justify-center text-2xl">🧭</div>
+                <h2 class="text-3xl font-bold text-white tracking-tight">【第二层】元音与介音 (21维度)：空间、体积与多维扭曲</h2>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- 基础轴 -->
+                <div class="glass-panel p-6 rounded-2xl">
+                    <h3 class="text-xl font-bold text-white mb-4">📍 基础单极坐标系</h3>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="bg-slate-900/50 p-3 rounded-lg border border-slate-700">
+                            <div class="flex justify-between items-center mb-1">
+                                <strong class="hangul text-2xl text-rose-400">ㅏ <span class="roman text-sm">[a]</span></strong>
+                                <span class="text-xs font-bold text-slate-400 uppercase">向外/明亮</span>
+                            </div>
+                            <div class="text-sm text-slate-300">例: <strong>밝다</strong> [balk-da] 明亮</div>
+                        </div>
+                        <div class="bg-slate-900/50 p-3 rounded-lg border border-slate-700">
+                            <div class="flex justify-between items-center mb-1">
+                                <strong class="hangul text-2xl text-indigo-400">ㅓ <span class="roman text-sm">[eo]</span></strong>
+                                <span class="text-xs font-bold text-slate-400 uppercase">向内/沉闷</span>
+                            </div>
+                            <div class="text-sm text-slate-300">例: <strong>어둡다</strong> [eo-dup-da] 昏暗</div>
+                        </div>
+                        <div class="bg-slate-900/50 p-3 rounded-lg border border-slate-700">
+                            <div class="flex justify-between items-center mb-1">
+                                <strong class="hangul text-2xl text-rose-400">ㅗ <span class="roman text-sm">[o]</span></strong>
+                                <span class="text-xs font-bold text-slate-400 uppercase">向上/凸起</span>
+                            </div>
+                            <div class="text-sm text-slate-300">例: <strong>오르다</strong> [o-reu-da] 上升</div>
+                        </div>
+                        <div class="bg-slate-900/50 p-3 rounded-lg border border-slate-700">
+                            <div class="flex justify-between items-center mb-1">
+                                <strong class="hangul text-2xl text-indigo-400">ㅜ <span class="roman text-sm">[u]</span></strong>
+                                <span class="text-xs font-bold text-slate-400 uppercase">向下/深渊</span>
+                            </div>
+                            <div class="text-sm text-slate-300">例: <strong>우울</strong> [u-ul] 忧郁</div>
+                        </div>
+                        <div class="bg-slate-900/50 p-3 rounded-lg border border-slate-700">
+                            <div class="flex justify-between items-center mb-1">
+                                <strong class="hangul text-2xl text-slate-200">ㅡ <span class="roman text-sm">[eu]</span></strong>
+                                <span class="text-xs font-bold text-slate-400 uppercase">水平/拉长</span>
+                            </div>
+                            <div class="text-sm text-slate-300">例: <strong>늘</strong> [neul] 总是</div>
+                        </div>
+                        <div class="bg-slate-900/50 p-3 rounded-lg border border-slate-700">
+                            <div class="flex justify-between items-center mb-1">
+                                <strong class="hangul text-2xl text-slate-200">ㅣ <span class="roman text-sm">[i]</span></strong>
+                                <span class="text-xs font-bold text-slate-400 uppercase">垂直/焦点</span>
+                            </div>
+                            <div class="text-sm text-slate-300">例: <strong>이</strong> [i] 这个/存在</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 复合矢量轴 -->
+                <div class="glass-panel p-6 rounded-2xl border-l-4 border-l-rose-500">
+                    <h3 class="text-xl font-bold text-white mb-4">🌪️ Y/W 介音矢量：多维扭曲与旋转</h3>
+                    <p class="text-sm text-slate-400 mb-4">当基础元音前加入 <strong>[y]</strong> 或 <strong>[w]</strong>，动作不再是直线的，而是产生了<strong>加速度、扭曲或旋转包围</strong>。</p>
+                    <ul class="space-y-3">
+                        <li class="bg-slate-800/50 p-2 rounded flex items-center gap-3">
+                            <strong class="hangul text-xl text-rose-300 w-12 text-center">ㅑ/ㅕ</strong>
+                            <div class="text-sm text-slate-300"><strong class="text-white">Y矢量 (瞬间加速/折叠)：</strong> 动作迅速弹开或剧烈扭曲收缩。</div>
+                        </li>
+                        <li class="bg-slate-800/50 p-2 rounded flex items-center gap-3">
+                            <strong class="hangul text-xl text-indigo-300 w-12 text-center">ㅘ/ㅝ</strong>
+                            <div class="text-sm text-slate-300"><strong class="text-white">W矢量 (全方位旋转/包裹)：</strong> ㅗ+ㅏ/ㅜ+ㅓ。代表力量的全面张开或巨大的漩涡内吸。</div>
+                        </li>
+                        <li class="bg-slate-800/50 p-2 rounded flex items-center gap-3">
+                            <strong class="hangul text-xl text-slate-200 w-12 text-center">ㅐ/ㅔ</strong>
+                            <div class="text-sm text-slate-300"><strong class="text-white">混合端点 (方向+极点)：</strong> ㅏ+ㅣ/ㅓ+ㅣ。力量向某个方向延伸并最终聚焦于极小的一点。</div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section class="reveal">
+            <div class="flex items-center gap-4 mb-6 border-b border-slate-800 pb-4">
+                <div class="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center text-2xl">⚙️</div>
+                <h2 class="text-3xl font-bold text-white tracking-tight">【第三层】参数微调：张力齿轮与阴阳对立 (Ablaut)</h2>
+            </div>
+            
+            <p class="text-slate-400 text-sm mb-6">不换词根，只拨动参数：通过改变气流大小（紧音/送气）改变硬度，通过改变元音（阴/阳）改变体积大小。</p>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- 阴阳对比 -->
+                <div class="glass-panel p-6 rounded-2xl">
+                    <h3 class="text-lg font-bold text-white mb-3 text-center border-b border-slate-700 pb-2">🌗 元音阴阳：轻重与明暗的魔法</h3>
+                    <div class="space-y-4 mt-4">
+                        <div class="flex justify-between items-center bg-white/5 p-2 rounded">
+                            <div class="w-1/2 pr-2 text-right"><strong class="text-rose-400 hangul text-lg">작다</strong> <span class="roman">[jak-da]</span><br><span class="text-xs text-slate-400">实体小 (阳ㅏ)</span></div>
+                            <div class="text-slate-600">VS</div>
+                            <div class="w-1/2 pl-2"><strong class="text-indigo-400 hangul text-lg">적다</strong> <span class="roman">[jeok-da]</span><br><span class="text-xs text-slate-400">数量少 (阴ㅓ)</span></div>
+                        </div>
+                        <div class="flex justify-between items-center bg-white/5 p-2 rounded">
+                            <div class="w-1/2 pr-2 text-right"><strong class="text-rose-400 hangul text-lg">낡다</strong> <span class="roman">[nalk-da]</span><br><span class="text-xs text-slate-400">外表旧 (阳ㅏ)</span></div>
+                            <div class="text-slate-600">VS</div>
+                            <div class="w-1/2 pl-2"><strong class="text-indigo-400 hangul text-lg">늙다</strong> <span class="roman">[neulk-da]</span><br><span class="text-xs text-slate-400">生命老 (阴ㅡ)</span></div>
+                        </div>
+                        <div class="flex justify-between items-center bg-white/5 p-2 rounded">
+                            <div class="w-1/2 pr-2 text-right"><strong class="text-rose-400 hangul text-lg">살살</strong> <span class="roman">[sal-sal]</span><br><span class="text-xs text-slate-400">轻巧地摸 (阳ㅏ)</span></div>
+                            <div class="text-slate-600">VS</div>
+                            <div class="w-1/2 pl-2"><strong class="text-indigo-400 hangul text-lg">슬슬</strong> <span class="roman">[seul-seul]</span><br><span class="text-xs text-slate-400">暗中溜走 (阴ㅡ)</span></div>
+                        </div>
+                        <div class="flex justify-between items-center bg-white/5 p-2 rounded">
+                            <div class="w-1/2 pr-2 text-right"><strong class="text-rose-400 hangul text-lg">파랗다</strong> <span class="roman">[pa-rah-da]</span><br><span class="text-xs text-slate-400">天蓝/明亮 (阳ㅏ)</span></div>
+                            <div class="text-slate-600">VS</div>
+                            <div class="w-1/2 pl-2"><strong class="text-indigo-400 hangul text-lg">퍼렇다</strong> <span class="roman">[peo-reoh-da]</span><br><span class="text-xs text-slate-400">深蓝/暗沉 (阴ㅓ)</span></div>
+                        </div>
+                        <div class="flex justify-between items-center bg-white/5 p-2 rounded">
+                            <div class="w-1/2 pr-2 text-right"><strong class="text-rose-400 hangul text-lg">졸졸</strong> <span class="roman">[jol-jol]</span><br><span class="text-xs text-slate-400">浅水潺潺 (阳ㅗ)</span></div>
+                            <div class="text-slate-600">VS</div>
+                            <div class="w-1/2 pl-2"><strong class="text-indigo-400 hangul text-lg">줄줄</strong> <span class="roman">[jul-jul]</span><br><span class="text-xs text-slate-400">大水倾泻 (阴ㅜ)</span></div>
+                        </div>
+                        <div class="flex justify-between items-center bg-white/5 p-2 rounded">
+                            <div class="w-1/2 pr-2 text-right"><strong class="text-rose-400 hangul text-lg">퐁당</strong> <span class="roman">[pong-dang]</span><br><span class="text-xs text-slate-400">小落水声 (阳ㅗㅏ)</span></div>
+                            <div class="text-slate-600">VS</div>
+                            <div class="w-1/2 pl-2"><strong class="text-indigo-400 hangul text-lg">풍덩</strong> <span class="roman">[pung-deong]</span><br><span class="text-xs text-slate-400">沉重落水 (阴ㅜㅓ)</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 张力齿轮 -->
+                <div class="glass-panel p-6 rounded-2xl">
+                    <h3 class="text-lg font-bold text-white mb-3 text-center border-b border-slate-700 pb-2">⚙️ 辅音张力：破损与压力的量级</h3>
+                    <div class="space-y-4 mt-4">
+                        <div class="bg-white/5 p-3 rounded">
+                            <strong class="text-white text-lg">1挡 平音 (자르다, 가르다)</strong>
+                            <p class="text-sm text-slate-400 mt-1">自然动作，平滑无阻碍。正常地分开、切开。</p>
+                        </div>
+                        <div class="bg-purple-900/30 border border-purple-500/30 p-3 rounded">
+                            <strong class="text-purple-300 text-lg">2挡 紧音 (짜다, 까다, 빨다, 빠르다)</strong>
+                            <p class="text-sm text-slate-300 mt-1">气流死死憋住。极度压缩、坚硬、瞬间发力。挤、暴力剥壳、死死吸住、极速爆发。</p>
+                        </div>
+                        <div class="bg-red-900/30 border border-red-500/30 p-3 rounded">
+                            <strong class="text-red-300 text-lg">3挡 送气音 (차다, 파다, 파르다)</strong>
+                            <p class="text-sm text-slate-300 mt-1">气流喷涌而出。剧烈破坏、散开、带有风感。用力踢开、挖破地表、破裂开来。</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="reveal">
+            <div class="flex items-center gap-4 mb-6 border-b border-slate-800 pb-4">
+                <div class="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center text-2xl">⚓</div>
+                <h2 class="text-3xl font-bold text-white tracking-tight">【第四层】收音落地 (28状态)：动作的物理终局</h2>
+            </div>
+            
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="glass-panel p-4 rounded-xl text-center">
+                    <strong class="hangul text-2xl text-emerald-400 block mb-2">ㄱ <span class="roman text-sm">[k]</span></strong>
+                    <div class="text-sm font-bold text-white mb-1">硬着陆/卡死</div>
+                    <div class="text-xs text-slate-400">막다 [mak-da] 堵住<br>벽 [byeok] 墙</div>
+                </div>
+                <div class="glass-panel p-4 rounded-xl text-center">
+                    <strong class="hangul text-2xl text-emerald-400 block mb-2">ㄴ <span class="roman text-sm">[n]</span></strong>
+                    <div class="text-sm font-bold text-white mb-1">沉淀/静态附着</div>
+                    <div class="text-xs text-slate-400">산 [san] 山<br>눈 [nun] 雪/眼</div>
+                </div>
+                <div class="glass-panel p-4 rounded-xl text-center">
+                    <strong class="hangul text-2xl text-emerald-400 block mb-2">ㄹ <span class="roman text-sm">[l]</span></strong>
+                    <div class="text-sm font-bold text-white mb-1">动能保留/滑动</div>
+                    <div class="text-xs text-slate-400">돌 [dol] 石头<br>길 [gil] 道路</div>
+                </div>
+                <div class="glass-panel p-4 rounded-xl text-center border border-emerald-400/50 bg-emerald-900/10">
+                    <strong class="hangul text-2xl text-emerald-400 block mb-2">ㅁ <span class="roman text-sm">[m]</span></strong>
+                    <div class="text-sm font-bold text-white mb-1">终极实体封装</div>
+                    <div class="text-xs text-emerald-200">잠 (睡), 꿈 (梦)<br>얼음 (冰), 웃음 (笑)<br>삶 (人生), 앎 (知)</div>
+                </div>
+                <div class="glass-panel p-4 rounded-xl text-center">
+                    <strong class="hangul text-2xl text-emerald-400 block mb-2">ㅇ <span class="roman text-sm">[ng]</span></strong>
+                    <div class="text-sm font-bold text-white mb-1">中空/空间共振</div>
+                    <div class="text-xs text-slate-400">방 [bang] 房间<br>공 [gong] 球/空</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="reveal">
+            <div class="flex items-center gap-4 mb-6 border-b border-slate-800 pb-4">
+                <div class="w-12 h-12 rounded-xl bg-[#c084fc]/10 border border-[#c084fc]/30 text-[#c084fc] flex items-center justify-center text-2xl">🧩</div>
+                <h2 class="text-3xl font-bold text-white tracking-tight">【第五层】高阶合成系：多音节动作解析</h2>
+            </div>
+            
+            <div class="flex flex-col gap-4">
+                <div class="glass-panel p-6 rounded-2xl flex flex-col md:flex-row gap-6 items-center">
+                    <div class="text-center w-full md:w-1/4">
+                        <strong class="text-4xl text-white hangul">뚫다</strong><br>
+                        <span class="roman text-slate-400">[ttulh-da] 贯穿</span>
+                    </div>
+                    <div class="w-full md:w-3/4 text-sm text-slate-300">
+                        <strong class="text-[#c084fc]">ㄸ(物理重压) + ㅜ(向深处) + ㄹ(持续钻进) + ㅎ(气流漏出)</strong><br>
+                        施加极强的向下重压，让硬物向深处持续钻进滑动，直到彻底穿透让内部空气漏出。
+                    </div>
+                </div>
+
+                <div class="glass-panel p-6 rounded-2xl flex flex-col md:flex-row gap-6 items-center">
+                    <div class="text-center w-full md:w-1/4">
+                        <strong class="text-4xl text-white hangul">껍질</strong><br>
+                        <span class="roman text-slate-400">[kkeop-jil] 壳/皮</span>
+                    </div>
+                    <div class="w-full md:w-3/4 text-sm text-slate-300">
+                        <strong class="text-[#c084fc]">껍(坚硬向内包裹形成表层) + 질(指尖捏住薄片剥落)</strong><br>
+                        [ㄲ+ㅓ+ㅂ] 一个向内紧紧包裹的坚硬表层；[ㅈ+ㅣ+ㄹ] 可以用指尖捏住垂直分离并滑动撕扯下来的东西。
+                    </div>
+                </div>
+
+                <div class="glass-panel p-6 rounded-2xl flex flex-col md:flex-row gap-6 items-center">
+                    <div class="text-center w-full md:w-1/4">
+                        <strong class="text-4xl text-white hangul">바람</strong><br>
+                        <span class="roman text-slate-400">[ba-ram] 风</span>
+                    </div>
+                    <div class="w-full md:w-3/4 text-sm text-slate-300">
+                        <strong class="text-[#c084fc]">바(广阔张开的平面) + 람(向外滚动的实体)</strong><br>
+                        在无限敞开的平面上，有一股向外流动的势能，被整体封装封装(ㅁ)成了一个物理概念。
+                    </div>
+                </div>
+
+                <div class="glass-panel p-6 rounded-2xl flex flex-col md:flex-row gap-6 items-center border border-rose-500/30">
+                    <div class="text-center w-full md:w-1/4">
+                        <strong class="text-4xl text-rose-300 hangul">짓누르다</strong><br>
+                        <span class="roman text-slate-400">[jit-nu-reu-da] 蹂躏/重压</span>
+                    </div>
+                    <div class="w-full md:w-3/4 text-sm text-slate-300">
+                        <strong class="text-rose-400">짓(向下的死死聚焦与摩擦) + 누르다(持续施加向下存在的压力)</strong><br>
+                        [ㅈ+ㅣ+ㅅ]力量聚焦向下且带有摩擦破坏感；[ㄴ+ㅜ+ㄹ]力量深深沉入底部并持续滑动。极具压迫感的多音节组合。
+                    </div>
+                </div>
+
+                <div class="glass-panel p-6 rounded-2xl flex flex-col md:flex-row gap-6 items-center border border-indigo-500/30">
+                    <div class="text-center w-full md:w-1/4">
+                        <strong class="text-4xl text-indigo-300 hangul">얽매이다</strong><br>
+                        <span class="roman text-slate-400">[eolk-mae-i-da] 被束缚/缠绕</span>
+                    </div>
+                    <div class="w-full md:w-3/4 text-sm text-slate-300">
+                        <strong class="text-indigo-400">얽(无序滑动后卡死) + 매(向外延伸后封装) + 이(状态被动极点化)</strong><br>
+                        [ㅇ+ㅓ+ㄺ]暗处的空虚之物在滑动(ㄹ)后被强行卡死(ㄱ)；[ㅁ+ㅐ]像容器一样包裹住延展物。极度痛苦的被动束缚态。
+                    </div>
+                </div>
+                
+                <div class="glass-panel p-6 rounded-2xl flex flex-col md:flex-row gap-6 items-center">
+                    <div class="text-center w-full md:w-1/4">
+                        <strong class="text-3xl text-white hangul">부스러기</strong><br>
+                        <span class="roman text-slate-400">[bu-seu-reo-gi] 碎屑</span>
+                    </div>
+                    <div class="w-full md:w-3/4 text-sm text-slate-300">
+                        <strong class="text-[#c084fc]">부(沉重膨胀) + 스(碎裂摩擦) + 러(延展) + 기(形成微小基点)</strong><br>
+                        原本膨胀厚重的实体，被摩擦碾碎，碎片散开延展，最终变成了一个个微小的颗粒基点。
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 终极发音组合笛卡尔积算力引擎 -->
+        <section class="reveal mt-12 mb-12">
+            <div class="glass-panel rounded-3xl p-8 border-2 border-[#38bdf8] shadow-[0_0_40px_rgba(56,189,248,0.2)] bg-[#050810]/95 relative overflow-hidden">
+                <div class="absolute inset-0 bg-gradient-to-br from-[#38bdf8]/10 to-[#c084fc]/10 z-0 pointer-events-none"></div>
+                
+                <div class="relative z-10 text-center mb-8">
+                    <h2 class="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#38bdf8] to-[#c084fc] tracking-tight mb-2">11,172 笛卡尔积全息算力引擎</h2>
+                    <p class="text-slate-400 text-sm">穷尽所有组合：(19首辅音 × 21元音 × 28收音)。选择任意参数，系统将实时拼装韩字，并计算底层物理方程。</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10">
+                    <!-- Initial Consonant -->
+                    <div class="flex flex-col gap-2">
+                        <label class="text-[#38bdf8] font-bold text-sm tracking-widest uppercase">1. 首辅音 [骨架/起势]</label>
+                        <select id="engine-cho" class="bg-slate-900 border border-[#38bdf8]/50 text-white p-4 rounded-xl text-lg outline-none focus:ring-2 focus:ring-[#38bdf8] appearance-none cursor-pointer hangul transition-all hover:bg-slate-800"></select>
+                    </div>
+
+                    <!-- Vowel -->
+                    <div class="flex flex-col gap-2">
+                        <label class="text-[#f43f5e] font-bold text-sm tracking-widest uppercase">2. 元音 [空间/张力]</label>
+                        <select id="engine-jung" class="bg-slate-900 border border-[#f43f5e]/50 text-white p-4 rounded-xl text-lg outline-none focus:ring-2 focus:ring-[#f43f5e] appearance-none cursor-pointer hangul transition-all hover:bg-slate-800"></select>
+                    </div>
+
+                    <!-- Final Consonant -->
+                    <div class="flex flex-col gap-2">
+                        <label class="text-[#34d399] font-bold text-sm tracking-widest uppercase">3. 收音 [结局/落地]</label>
+                        <select id="engine-jong" class="bg-slate-900 border border-[#34d399]/50 text-white p-4 rounded-xl text-lg outline-none focus:ring-2 focus:ring-[#34d399] appearance-none cursor-pointer hangul transition-all hover:bg-slate-800"></select>
+                    </div>
+                </div>
+
+                <!-- Output Display -->
+                <div class="mt-8 bg-slate-950/80 rounded-2xl border border-slate-700/50 p-6 flex flex-col items-center relative z-10">
+                    <div class="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-4">算力结果投影 (Computed Result)</div>
+                    
+                    <div class="flex flex-col md:flex-row items-center gap-8 md:gap-16 w-full justify-center">
+                        <div class="flex flex-col items-center flex-shrink-0">
+                            <div id="engine-result-hangul" class="text-7xl md:text-9xl font-black text-white drop-shadow-[0_0_20px_rgba(255,255,255,0.4)] hangul transition-all duration-300 transform">살</div>
+                            <div id="engine-result-roman" class="roman text-slate-400 text-xl mt-2">[sal]</div>
+                        </div>
+
+                        <div class="w-full md:w-px h-px md:h-32 bg-gradient-to-r md:bg-gradient-to-b from-transparent via-slate-500 to-transparent"></div>
+
+                        <div class="flex flex-col flex-1 max-w-xl">
+                            <h4 class="text-[#fbbf24] font-bold mb-2">底层物理方程：</h4>
+                            <div id="engine-result-equation" class="text-lg text-slate-200 leading-relaxed font-light mb-4">
+                                <span class="text-[#38bdf8] font-bold">【生命/渗透】</span> 发生于 <span class="text-[#f43f5e] font-bold">【向外/开阔】</span> 维度，结局是 <span class="text-[#34d399] font-bold">【动能流转保留】</span>。
+                            </div>
+                            
+                            <h4 class="text-[#c084fc] font-bold mb-1">字典投影匹配：</h4>
+                            <div id="engine-result-meaning" class="text-white text-xl font-medium bg-white/5 py-3 px-4 rounded-lg border border-white/10 transition-colors">
+                                살 (Sal) - 肉体 / 肌肤 / 岁月
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        // 19 Cho-seong (Initial)
+        const choList = [
+            {char: 'ㄱ', roman: 'g', meaning: '折角/硬边界/开始'}, {char: 'ㄲ', roman: 'kk', meaning: '极硬边界/猛烈破壳'},
+            {char: 'ㄴ', roman: 'n', meaning: '内生/时间/软性流变'}, {char: 'ㄷ', roman: 'd', meaning: '实体点触/平稳承载'},
+            {char: 'ㄸ', roman: 'tt', meaning: '瞬间重击/极点承载'}, {char: 'ㄹ', roman: 'r/l', meaning: '顺滑流转/持续交织'},
+            {char: 'ㅁ', roman: 'm', meaning: '闭合容器/水态/聚集'}, {char: 'ㅂ', roman: 'b', meaning: '张开平面/外展/墙壁'},
+            {char: 'ㅃ', roman: 'pp', meaning: '高压粘连/极度紧缩'}, {char: 'ㅅ', roman: 's', meaning: '缝隙分离/生命实体'},
+            {char: 'ㅆ', roman: 'ss', meaning: '极致摩擦/细碎撕裂'}, {char: 'ㅇ', roman: '', meaning: '无阻碍虚空/内部中空'},
+            {char: 'ㅈ', roman: 'j', meaning: '聚焦/捏拢/对准集中'}, {char: 'ㅉ', roman: 'jj', meaning: '空间极度紧缩/榨取'},
+            {char: 'ㅊ', roman: 'ch', meaning: '带风破裂/突刺寻找'}, {char: 'ㅋ', roman: 'k', meaning: '边界猛烈扩张/通风口'},
+            {char: 'ㅌ', roman: 't', meaning: '向外爆开/猛烈碰撞'}, {char: 'ㅍ', roman: 'p', meaning: '表面强力破坏/飞扬散开'},
+            {char: 'ㅎ', roman: 'h', meaning: '能量耗散/气流无限释放'}
+        ];
+
+        // 21 Jung-seong (Vowels)
+        const jungList = [
+            {char: 'ㅏ', roman: 'a', meaning: '向外/明亮开阔 (阳)'}, {char: 'ㅐ', roman: 'ae', meaning: '向外延伸至极点'},
+            {char: 'ㅑ', roman: 'ya', meaning: '快速向外/弹跳 (Y矢量)'}, {char: 'ㅒ', roman: 'yae', meaning: '快速外延至极点'},
+            {char: 'ㅓ', roman: 'eo', meaning: '向内/暗处沉重 (阴)'}, {char: 'ㅔ', roman: 'e', meaning: '向内收缩至极点'},
+            {char: 'ㅕ', roman: 'yeo', meaning: '快速向内/收缩 (Y矢量)'}, {char: 'ㅖ', roman: 'ye', meaning: '快速内收至极点'},
+            {char: 'ㅗ', roman: 'o', meaning: '向上/凸起高空 (阳)'}, {char: 'ㅘ', roman: 'wa', meaning: '全方位向外展开 (W矢量)'},
+            {char: 'ㅙ', roman: 'wae', meaning: '全方位向外突进'}, {char: 'ㅚ', roman: 'oe', meaning: '向上包围合拢焦点'},
+            {char: 'ㅛ', roman: 'yo', meaning: '快速向上跃动 (Y矢量)'}, {char: 'ㅜ', roman: 'u', meaning: '向下/深潜闭塞 (阴)'},
+            {char: 'ㅝ', roman: 'wo', meaning: '全方位漩涡向下 (W矢量)'}, {char: 'ㅞ', roman: 'we', meaning: '深渊向下收缩基点'},
+            {char: 'ㅟ', roman: 'wi', meaning: '深渊垂直点定格'}, {char: 'ㅠ', roman: 'yu', meaning: '急速下坠扎入 (Y矢量)'},
+            {char: 'ㅡ', roman: 'eu', meaning: '水平大地拉长 (阴基底)'}, {char: 'ㅢ', roman: 'ui', meaning: '水平流动并定格'},
+            {char: 'ㅣ', roman: 'i', meaning: '微小极点/绝对垂直点'}
+        ];
+
+        // 28 Jong-seong (Batchim)
+        const jongList = [
+            {char: '(无收音)', roman: '', meaning: '动作发散延续未定格'},
+            {char: 'ㄱ', roman: 'k', meaning: '硬性截断/卡死闭锁'}, {char: 'ㄲ', roman: 'kk', meaning: '双重卡死/极限截断'},
+            {char: 'ㄳ', roman: 'ks', meaning: '截断并伴随摩擦消散'}, {char: 'ㄴ', roman: 'n', meaning: '内部静态留存/沉淀'},
+            {char: 'ㄵ', roman: 'nj', meaning: '沉淀并被死死聚拢'}, {char: 'ㄶ', roman: 'nh', meaning: '沉淀后气流耗散'},
+            {char: 'ㄷ', roman: 't', meaning: '触底闭合/平稳死死合拢'}, {char: 'ㄹ', roman: 'l', meaning: '悬空不定/流体动能保留'},
+            {char: 'ㄺ', roman: 'lk', meaning: '流动遇阻被强行卡死'}, {char: 'ㄻ', roman: 'lm', meaning: '流动最终被封装化为实体'},
+            {char: 'ㄼ', roman: 'lp', meaning: '延展滑行后被重重压平'}, {char: 'ㄽ', roman: 'ls', meaning: '滚动中产生摩擦消散'},
+            {char: 'ㄾ', roman: 'lt', meaning: '滑过表面后猛烈弹开'}, {char: 'ㄿ', roman: 'lp', meaning: '流转后破裂飞散'},
+            {char: 'ㅀ', roman: 'lh', meaning: '流动中抓不住虚无消散'}, {char: 'ㅁ', roman: 'm', meaning: '实体化闭环/彻底名词化封装'},
+            {char: 'ㅂ', roman: 'p', meaning: '降维成面/沉重压迫截断'}, {char: 'ㅄ', roman: 'ps', meaning: '压扁成面后被摩擦刮除'},
+            {char: 'ㅅ', roman: 't', meaning: '穿刺触底/尖锐渗透停止'}, {char: 'ㅆ', roman: 't', meaning: '极限闭合并惨烈摩擦'},
+            {char: 'ㅇ', roman: 'ng', meaning: '球体化回音共振/形成中空'}, {char: 'ㅈ', roman: 't', meaning: '聚拢卡死/精准截断'},
+            {char: 'ㅊ', roman: 't', meaning: '强力爆发刺穿后触底'}, {char: 'ㅋ', roman: 'k', meaning: '撕裂大口子后强行破开'},
+            {char: 'ㅌ', roman: 't', meaning: '触底猛烈爆开'}, {char: 'ㅍ', roman: 'p', meaning: '表面彻底爆裂崩碎着陆'},
+            {char: 'ㅎ', roman: 't', meaning: '能量归零消散于虚无'}
+        ];
+
+        // Massive Dictionary mapping for precise matches
+        const dictionary = {
+            "살": "肉 / 肌肤 / 年岁 (生命存在)", "사람": "人 (鲜活生命体)", "사랑": "爱", "사내": "男人",
+            "물": "水 (聚集液体)", "불": "火 (膨胀能量)", "돌": "石头 (滚动硬物)", "달": "月亮 (高悬悬浮)",
+            "별": "星 (发散点)", "해": "太阳 (释放光的源头)", "흙": "泥土 (沉降被卡死的混合物)", 
+            "삶": "人生/生活 (流动被封装)", "잠": "睡眠 (向下沉静被封装)", "꿈": "梦 (深渊幻象被封装)",
+            "빛": "光 (极点爆发)", "눈": "眼/雪 (沉降附着物)", "손": "手 (分离独立)", "발": "脚 (接触平面的延伸)",
+            "숨": "呼吸 (渗透进深渊被封装)", "말": "言语/马", "칼": "刀 (带风破开的延续)", "길": "路", 
+            "마음": "心 (容器)", "몸": "身体", "맛": "味道", "벽": "墙壁", "바닥": "底面", "방": "房间", "공": "球/空",
+            "새": "鸟/新", "피": "血", "비": "雨 (张开洒落)", "밤": "夜", "낮": "白天", "봄": "春", "가을": "秋", "겨울": "冬",
+            "힘": "力", "입": "嘴 (微小容器)", "귀": "耳", "코": "鼻", "배": "船/肚子", "산": "山", "강": "江", 
+            "가다": "去", "오다": "来", "먹다": "吃", "자다": "睡", "보다": "看", "잡다": "抓", "주다": "给",
+            "파다": "挖", "차다": "踢/冷/满", "크다": "大", "작다": "小", "적다": "少", "밝다": "明亮", "붉다": "红",
+            "파랗다": "蓝", "퍼렇다": "深蓝", "뚫다": "贯穿", "깎다": "削", "짜다": "挤/咸", "바람": "风"
+        };
+
+        function initEngine() {
+            const choSelect = document.getElementById('engine-cho');
+            const jungSelect = document.getElementById('engine-jung');
+            const jongSelect = document.getElementById('engine-jong');
+
+            choList.forEach((c, idx) => choSelect.add(new Option(`${c.char} (${c.meaning.split('/')[0]})`, idx)));
+            jungList.forEach((j, idx) => jungSelect.add(new Option(`${j.char} (${j.meaning.split('/')[0]})`, idx)));
+            jongList.forEach((j, idx) => jongSelect.add(new Option(`${j.char} (${j.meaning.split('/')[0]})`, idx)));
+
+            // Set default "살 (sal)"
+            choSelect.selectedIndex = 9;  // ㅅ
+            jungSelect.selectedIndex = 0; // ㅏ
+            jongSelect.selectedIndex = 8; // ㄹ
+
+            const updateResult = () => {
+                const cIdx = parseInt(choSelect.value);
+                const vIdx = parseInt(jungSelect.value);
+                const bIdx = parseInt(jongSelect.value);
+
+                // Unicode Magic: Hangul Syllables Start at 0xAC00 (44032)
+                const codePoint = 44032 + (cIdx * 588) + (vIdx * 28) + bIdx;
+                const hangulChar = String.fromCharCode(codePoint);
+                
+                const cho = choList[cIdx];
+                const jung = jungList[vIdx];
+                const jong = jongList[bIdx];
+
+                const displayHangul = document.getElementById('engine-result-hangul');
+                displayHangul.textContent = hangulChar;
+                
+                // Animation pop
+                displayHangul.style.transform = 'scale(1.1)';
+                setTimeout(() => displayHangul.style.transform = 'scale(1)', 150);
+
+                const roman = `[${cho.roman}${jung.roman}${jong.roman}]`;
+                document.getElementById('engine-result-roman').textContent = roman;
+
+                const equationHTML = `
+                    <span class="text-[#38bdf8] font-bold">【${cho.meaning}】</span> 发生于 
+                    <span class="text-[#f43f5e] font-bold">【${jung.meaning}】</span> 维度，结局是 
+                    <span class="text-[#34d399] font-bold">【${jong.meaning}】</span>。
+                `;
+                document.getElementById('engine-result-equation').innerHTML = equationHTML;
+
+                const meaningEl = document.getElementById('engine-result-meaning');
+                if (dictionary[hangulChar]) {
+                    meaningEl.innerHTML = `<span class="text-white">${dictionary[hangulChar]}</span>`;
+                    meaningEl.className = "text-xl font-medium bg-[#10b981]/20 py-3 px-5 rounded-xl border border-[#10b981]/40 shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-all";
+                } else {
+                    // Check if base verb exists without batchim
+                    let fallbackText = "纯理论推演状态（未在核心高频词库中映射实体）";
+                    meaningEl.innerHTML = `<span class="text-slate-400 italic">${fallbackText}</span>`;
+                    meaningEl.className = "text-md font-medium bg-white/5 py-3 px-5 rounded-xl border border-white/10 transition-all";
+                }
+            };
+
+            choSelect.addEventListener('change', updateResult);
+            jungSelect.addEventListener('change', updateResult);
+            jongSelect.addEventListener('change', updateResult);
+
+            updateResult();
+        }
+
+        // --- UI Interactions ---
+        window.onscroll = function() {
+            var winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+            var height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            var scrolled = (winScroll / height) * 100;
+            document.getElementById("scroll-progress").style.width = scrolled + "%";
+        };
+
+        document.addEventListener("DOMContentLoaded", function() {
+            initEngine(); 
+
+            const observerOptions = {
+                root: null, rootMargin: '0px', threshold: 0.15
+            };
+            const observer = new IntersectionObserver((entries, obs) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) entry.target.classList.add('active');
+                });
+            }, observerOptions);
+
+            const revealElements = document.querySelectorAll('.reveal');
+            revealElements.forEach(el => observer.observe(el));
+            
+            setTimeout(() => {
+                revealElements.forEach(el => {
+                    if(el.getBoundingClientRect().top < window.innerHeight) el.classList.add('active');
+                });
+            }, 100);
+        });
+    </script>
+</body>
+</html>

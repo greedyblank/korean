@@ -1,0 +1,1878 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>韩语词源体系地图 · 어원 지도</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root {
+    --bg: #0a0e1a;
+    --panel: rgba(255,255,255,0.04);
+    --border: rgba(255,255,255,0.08);
+    --accent: #38bdf8;
+    --accent2: #f43f5e;
+    --accent3: #34d399;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background:
+      radial-gradient(ellipse at top left, rgba(56,189,248,0.08), transparent 50%),
+      radial-gradient(ellipse at bottom right, rgba(244,63,94,0.08), transparent 50%),
+      radial-gradient(ellipse at center, rgba(52,211,153,0.04), transparent 70%),
+      var(--bg);
+    min-height: 100vh;
+    color: #e2e8f0;
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+    font-feature-settings: "kern";
+  }
+  .glass {
+    background: var(--panel);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--border);
+  }
+  .gradient-text {
+    background: linear-gradient(135deg, #38bdf8 0%, #f43f5e 50%, #fbbf24 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .initial-btn {
+    transition: all 0.2s cubic-bezier(0.4,0,0.2,1);
+    position: relative;
+  }
+  .initial-btn:hover {
+    transform: translateY(-2px);
+    border-color: var(--accent);
+    box-shadow: 0 4px 20px rgba(56,189,248,0.2);
+  }
+  .initial-btn.active {
+    background: linear-gradient(135deg, rgba(56,189,248,0.25), rgba(244,63,94,0.15));
+    border-color: var(--accent);
+    box-shadow: 0 0 25px rgba(56,189,248,0.3);
+  }
+  .initial-btn.has-entries::after {
+    content: '';
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent3);
+    box-shadow: 0 0 8px var(--accent3);
+  }
+  .root-item, .word-item {
+    transition: all 0.15s ease;
+    cursor: pointer;
+  }
+  .root-item:hover, .word-item:hover {
+    background: rgba(56,189,248,0.08);
+    transform: translateX(2px);
+  }
+  .root-item.active, .word-item.active {
+    background: rgba(56,189,248,0.15);
+    border-left: 3px solid var(--accent);
+  }
+  .fade-in { animation: fadeIn 0.3s ease-out; }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .modal-backdrop {
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(6px);
+  }
+  textarea, input, select {
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border);
+    color: #e2e8f0;
+    transition: all 0.15s ease;
+  }
+  textarea:focus, input:focus, select:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(56,189,248,0.15);
+  }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+  .tag-pill {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    background: rgba(56,189,248,0.15);
+    color: #7dd3fc;
+    border: 1px solid rgba(56,189,248,0.25);
+    margin: 1px;
+  }
+  .toast {
+    animation: slideIn 0.3s ease-out;
+  }
+  @keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+  kbd {
+    display: inline-block;
+    padding: 1px 6px;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 11px;
+  }
+</style>
+</head>
+<body class="min-h-screen">
+
+<!-- ============================== Header ============================== -->
+<header class="sticky top-0 z-40 glass border-b border-white/10">
+  <div class="max-w-[1600px] mx-auto px-4 py-3 flex flex-wrap items-center gap-4">
+    <div class="flex items-baseline gap-3">
+      <h1 class="text-2xl font-bold gradient-text">韩语词源体系地图</h1>
+      <span class="text-sm text-slate-500 font-mono">어원 지도 · Etymology Atlas</span>
+    </div>
+
+    <div class="flex items-center gap-4 text-xs text-slate-400 ml-auto">
+      <div class="flex items-center gap-1.5">
+        <span class="text-[#38bdf8] font-bold text-base" id="stat-words">0</span>
+        <span>词条</span>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <span class="text-[#f43f5e] font-bold text-base" id="stat-roots">0</span>
+        <span>词根</span>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <span class="text-[#34d399] font-bold text-base" id="stat-initials">0</span>
+        <span>/19 初声</span>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <button onclick="openAddModal()" class="px-3 py-1.5 text-sm rounded-lg bg-[#38bdf8]/20 hover:bg-[#38bdf8]/30 border border-[#38bdf8]/40 text-[#7dd3fc] transition">
+        + 新词条
+      </button>
+      <button onclick="openPasteModal()" class="px-3 py-1.5 text-sm rounded-lg bg-[#f43f5e]/15 hover:bg-[#f43f5e]/25 border border-[#f43f5e]/30 text-[#fda4af] transition">
+        ♨ 批量粘贴
+      </button>
+      <button onclick="openAIModal()" id="ai-btn" class="px-3 py-1.5 text-sm rounded-lg bg-gradient-to-r from-[#a855f7]/25 to-[#ec4899]/25 hover:from-[#a855f7]/35 hover:to-[#ec4899]/35 border border-[#a855f7]/40 text-[#d8b4fe] transition">
+        ✨ AI 补全
+      </button>
+      <button onclick="openSettingsModal()" class="px-3 py-1.5 text-sm rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-400 hover:text-slate-200 transition" title="LLM 设置">
+        ⚙
+      </button>
+      <button onclick="exportJSON()" class="px-3 py-1.5 text-sm rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 transition">
+        ↓ 导出
+      </button>
+      <label class="px-3 py-1.5 text-sm rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 transition cursor-pointer">
+        ↑ 导入
+        <input type="file" accept=".json" onchange="importJSON(event)" class="hidden">
+      </label>
+      <button onclick="confirmReset()" class="px-3 py-1.5 text-sm rounded-lg bg-white/5 hover:bg-[#f43f5e]/20 border border-white/10 hover:border-[#f43f5e]/30 text-slate-400 hover:text-[#fda4af] transition">
+        ↺
+      </button>
+    </div>
+  </div>
+
+  <!-- Search bar -->
+  <div class="max-w-[1600px] mx-auto px-4 pb-3">
+    <div class="relative">
+      <input id="search-input" type="text" placeholder="搜索：한글 / 拉丁化 / 释义 / 标签 / 笔记…  (快捷键 /)"
+             oninput="onSearch(this.value)"
+             class="w-full rounded-xl px-4 py-2 pl-10 text-sm placeholder-slate-500" />
+      <svg class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+      </svg>
+      <span id="search-clear" class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 cursor-pointer text-sm" onclick="clearSearch()">✕</span>
+    </div>
+  </div>
+</header>
+
+<!-- ============================== Initial Consonant Grid ============================== -->
+<section class="max-w-[1600px] mx-auto px-4 mt-6">
+  <div class="flex items-baseline justify-between mb-3">
+    <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wider">初声导图 · Initial Consonant Atlas</h2>
+    <span class="text-xs text-slate-500">每个初声都是一个独立的"家"，等待填充</span>
+  </div>
+  <div id="initial-grid" class="grid grid-cols-9 md:grid-cols-10 lg:grid-cols-19 gap-2"></div>
+</section>
+
+<!-- ============================== Main 3-pane View ============================== -->
+<section class="max-w-[1600px] mx-auto px-4 mt-8 mb-16">
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 min-h-[600px]">
+
+    <!-- Pane 1: Roots under selected initial -->
+    <div class="lg:col-span-3 glass rounded-2xl p-4 flex flex-col">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-sm font-semibold text-slate-300">
+          <span id="roots-title">词根列表</span>
+        </h3>
+        <div class="flex items-center gap-2">
+          <span id="roots-count" class="text-xs text-slate-500"></span>
+          <button onclick="quickAddForInitial()" class="text-xs text-[#7dd3fc] hover:text-[#38bdf8] transition px-2 py-0.5 rounded border border-[#38bdf8]/20 hover:border-[#38bdf8]/40 hover:bg-[#38bdf8]/10" title="为当前初声添加新词">+ 新词</button>
+        </div>
+      </div>
+      <div id="roots-list" class="space-y-1 overflow-y-auto flex-1 max-h-[70vh]"></div>
+    </div>
+
+    <!-- Pane 2: Words under selected root -->
+    <div class="lg:col-span-4 glass rounded-2xl p-4 flex flex-col">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-sm font-semibold text-slate-300">
+          <span id="words-title">词条</span>
+        </h3>
+        <button onclick="quickAddForCurrentRoot()" class="text-xs text-[#7dd3fc] hover:text-[#38bdf8] transition">+ 添加到此词根</button>
+      </div>
+      <div id="words-list" class="space-y-2 overflow-y-auto flex-1 max-h-[70vh]"></div>
+    </div>
+
+    <!-- Pane 3: Detail panel -->
+    <div class="lg:col-span-5 glass rounded-2xl p-5 flex flex-col">
+      <div id="detail-panel" class="flex-1"></div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ============================== Initial meaning reference (collapsible) ============================== -->
+<section class="max-w-[1600px] mx-auto px-4 mb-16">
+  <details class="glass rounded-2xl p-4">
+    <summary class="cursor-pointer text-sm text-slate-400 hover:text-slate-200 transition">
+      📖 初声-中声-终声 音韵象征参考（点击展开）·  Phonetic Symbolism Reference
+    </summary>
+    <div id="reference-panel" class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4 text-xs"></div>
+  </details>
+</section>
+
+<!-- ============================== Add/Edit Modal ============================== -->
+<div id="add-modal" class="hidden fixed inset-0 z-50 modal-backdrop flex items-center justify-center p-4">
+  <div class="glass rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+    <div class="flex items-center justify-between mb-4">
+      <h3 id="add-modal-title" class="text-lg font-bold text-white">新增词条</h3>
+      <button onclick="closeAddModal()" class="text-slate-400 hover:text-white">✕</button>
+    </div>
+
+    <div class="space-y-3">
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-xs text-slate-400 block mb-1">한글 词形 *</label>
+          <input id="add-hangul" type="text" placeholder="例如 찌다" oninput="autofillFromHangul()"
+                 class="w-full rounded-lg px-3 py-2 text-sm">
+        </div>
+        <div>
+          <label class="text-xs text-slate-400 block mb-1">拉丁化 Roman</label>
+          <input id="add-roman" type="text" placeholder="例如 jji-da" class="w-full rounded-lg px-3 py-2 text-sm">
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-xs text-slate-400 block mb-1">词根 Root（默认首音节）</label>
+          <input id="add-root" type="text" placeholder="例如 찌" class="w-full rounded-lg px-3 py-2 text-sm">
+        </div>
+        <div>
+          <label class="text-xs text-slate-400 block mb-1">实际发音 [pron]</label>
+          <input id="add-pron" type="text" placeholder="例如 [찌다]" class="w-full rounded-lg px-3 py-2 text-sm">
+        </div>
+      </div>
+
+      <div>
+        <label class="text-xs text-slate-400 block mb-1">释义 Meaning *（多个义项用 ; 分号分隔）</label>
+        <textarea id="add-meaning" rows="2" placeholder="例如 蒸（食物）; 天气闷热; 长胖、长肉"
+                  class="w-full rounded-lg px-3 py-2 text-sm"></textarea>
+      </div>
+
+      <div>
+        <label class="text-xs text-slate-400 block mb-1">音素分拆 Decomposition</label>
+        <input id="add-decomp" type="text" placeholder="例如 ㅉ(强紧捏聚集)+ㅣ(垂直尖锐)+다(动作化)"
+               class="w-full rounded-lg px-3 py-2 text-sm">
+      </div>
+
+      <div>
+        <label class="text-xs text-slate-400 block mb-1">语义流转分析 Analysis</label>
+        <textarea id="add-analysis" rows="2" placeholder="强力紧捏的气流垂直向前穿透并定着于一点的动作..."
+                  class="w-full rounded-lg px-3 py-2 text-sm"></textarea>
+      </div>
+
+      <div>
+        <label class="text-xs text-slate-400 block mb-1">标签 Tags（空格分隔）</label>
+        <input id="add-tags" type="text" placeholder="例如 烹饪 气象 身体变化" class="w-full rounded-lg px-3 py-2 text-sm">
+      </div>
+
+      <div>
+        <label class="text-xs text-slate-400 block mb-1">私人笔记 Notes</label>
+        <textarea id="add-notes" rows="2" placeholder="个人联想、记忆法、与其他词的联系..."
+                  class="w-full rounded-lg px-3 py-2 text-sm"></textarea>
+      </div>
+    </div>
+
+    <div class="flex justify-end gap-2 mt-5">
+      <button onclick="closeAddModal()" class="px-4 py-2 text-sm rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 transition">取消</button>
+      <button onclick="saveEntry()" class="px-4 py-2 text-sm rounded-lg bg-[#38bdf8] hover:bg-[#0ea5e9] text-slate-900 font-semibold transition">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================== Bulk Paste Modal ============================== -->
+<div id="paste-modal" class="hidden fixed inset-0 z-50 modal-backdrop flex items-center justify-center p-4">
+  <div class="glass rounded-2xl p-6 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+    <div class="flex items-center justify-between mb-3">
+      <h3 class="text-lg font-bold text-white">批量粘贴导入</h3>
+      <button onclick="closePasteModal()" class="text-slate-400 hover:text-white">✕</button>
+    </div>
+
+    <p class="text-xs text-slate-400 mb-3 leading-relaxed">
+      支持以下格式（每行一条，空行分隔）：
+      <code class="text-[#7dd3fc] mx-1">한글 (roman)： 释义。</code>
+      系统会自动识别初声、词根、拉丁化与释义。多义项可用 <code class="text-[#fbbf24]">；</code> 或 <code class="text-[#fbbf24]">;</code> 分隔。
+    </p>
+
+    <div class="bg-black/30 rounded-lg p-3 mb-3 text-xs text-slate-400 font-mono">
+      示例：<br>
+      찌다 (jji-da)： 蒸（食物）、天气闷热。<br>
+      찌다 (jji-da)： 长胖、长肉。<br>
+      찌르다 (jji-reu-da)： 刺、扎、戳（极具物理破坏力的动作）。<br>
+      찌 (jji)： 钓鱼用的浮标。
+    </div>
+
+    <textarea id="paste-textarea" rows="14" placeholder="在此粘贴文本..."
+              class="w-full rounded-lg px-3 py-2 text-sm font-mono"></textarea>
+
+    <div id="paste-preview" class="hidden mt-3 text-xs text-slate-400"></div>
+
+    <div class="flex justify-end gap-2 mt-4">
+      <button onclick="closePasteModal()" class="px-4 py-2 text-sm rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 transition">取消</button>
+      <button onclick="previewPaste()" class="px-4 py-2 text-sm rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 transition">预览解析</button>
+      <button onclick="confirmPaste()" class="px-4 py-2 text-sm rounded-lg bg-[#f43f5e] hover:bg-[#e11d48] text-white font-semibold transition">导入</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================== Toast ============================== -->
+<div id="toast-container" class="fixed bottom-4 right-4 z-50 space-y-2"></div>
+
+<!-- ============================== LLM Settings Modal ============================== -->
+<div id="settings-modal" class="hidden fixed inset-0 z-50 modal-backdrop flex items-center justify-center p-4">
+  <div class="glass rounded-2xl p-6 max-w-xl w-full">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-lg font-bold text-white">⚙️ LLM 设置</h3>
+      <button onclick="closeSettingsModal()" class="text-slate-400 hover:text-white">✕</button>
+    </div>
+
+    <div class="space-y-3">
+      <div>
+        <label class="text-xs text-slate-400 block mb-1">服务商 Provider</label>
+        <select id="set-provider" onchange="onProviderChange()" class="w-full rounded-lg px-3 py-2 text-sm">
+          <option value="glm_anthropic">智谱 GLM (Anthropic 兼容) ⭐ 推荐</option>
+          <option value="glm">智谱 GLM (OpenAI v4 兼容)</option>
+          <option value="anthropic">Claude (Anthropic 官方)</option>
+          <option value="openai">OpenAI GPT</option>
+          <option value="deepseek">DeepSeek</option>
+          <option value="moonshot">Moonshot Kimi</option>
+          <option value="custom">自定义</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="text-xs text-slate-400 block mb-1">API 端点 Endpoint</label>
+        <input id="set-endpoint" type="text" placeholder="https://open.bigmodel.cn/api/anthropic/v1/messages"
+               class="w-full rounded-lg px-3 py-2 text-sm font-mono">
+        <p class="text-[10px] text-slate-500 mt-1">GLM-Anthropic 兼容端点（与 Claude Code 同款配置）</p>
+      </div>
+
+      <div>
+        <label class="text-xs text-slate-400 block mb-1">模型 Model</label>
+        <input id="set-model" type="text" placeholder="GLM-4.5-air"
+               class="w-full rounded-lg px-3 py-2 text-sm font-mono">
+        <p class="text-[10px] text-slate-500 mt-1">Anthropic 协议：<code>GLM-4.5-air</code>(便宜) · <code>GLM-5.1</code> / v4 协议：<code>glm-4-flash</code></p>
+      </div>
+
+      <div>
+        <label class="text-xs text-slate-400 block mb-1">API Key
+          <a href="https://open.bigmodel.cn/usercenter/apikeys" target="_blank" class="ml-2 text-[#7dd3fc] hover:underline">→ 此处获取</a>
+        </label>
+        <div class="relative">
+          <input id="set-apikey" type="password" placeholder="xxxxxxxx.xxxxxx（GLM API Key）"
+                 class="w-full rounded-lg px-3 py-2 pr-16 text-sm font-mono">
+          <button onclick="toggleKeyVisibility()" id="key-vis-btn" class="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-200 px-2 py-1 rounded">显示</button>
+        </div>
+      </div>
+
+      <div class="bg-[#34d399]/10 border border-[#34d399]/30 rounded-lg p-3">
+        <label class="flex items-start gap-2 cursor-pointer">
+          <input type="checkbox" id="set-use-proxy" class="mt-0.5 accent-[#34d399]">
+          <div class="text-xs leading-relaxed">
+            <span class="text-[#6ee7b7] font-semibold">🚀 使用本地代理（仅当直接连失败时再开）</span>
+            <p class="text-slate-400 mt-1">
+              <strong>GLM 已支持浏览器 CORS 直连</strong>，默认无需代理。
+              若直连仍失败（公司网络/特殊浏览器扩展拦截），再勾选并运行
+              <code class="text-[#fbbf24]">python3 glm_proxy.py</code>
+              <button onclick="copyProxyCmd()" class="ml-1 text-[#7dd3fc] hover:underline text-[10px]">复制命令</button>
+            </p>
+          </div>
+        </label>
+      </div>
+
+      <div class="bg-[#fbbf24]/10 border border-[#fbbf24]/30 rounded-lg p-3 text-xs text-[#fcd34d] leading-relaxed">
+        ⚠️ <strong>安全提示</strong>：API Key 仅保存在你浏览器的 localStorage 中，
+        不会上传到任何服务器。仅在你本机使用，请勿在公共电脑上保存。
+      </div>
+
+      <div class="flex items-center justify-between pt-2">
+        <button onclick="testConnection()" id="test-conn-btn" class="px-4 py-2 text-sm rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 transition">
+          🔗 测试连接
+        </button>
+        <div class="flex gap-2">
+          <button onclick="closeSettingsModal()" class="px-4 py-2 text-sm rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 transition">取消</button>
+          <button onclick="saveSettings()" class="px-4 py-2 text-sm rounded-lg bg-[#38bdf8] hover:bg-[#0ea5e9] text-slate-900 font-semibold transition">保存</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================== AI Completion Modal ============================== -->
+<div id="ai-modal" class="hidden fixed inset-0 z-50 modal-backdrop flex items-center justify-center p-4">
+  <div class="glass rounded-2xl p-6 max-w-2xl w-full">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-lg font-bold text-white">✨ AI 自动补全</h3>
+      <button onclick="closeAIModal()" class="text-slate-400 hover:text-white">✕</button>
+    </div>
+
+    <div id="ai-scan-panel" class="space-y-3">
+      <div id="ai-scan-result" class="text-sm text-slate-300"></div>
+      <div class="bg-white/[0.03] border border-white/10 rounded-lg p-3 text-xs text-slate-400 leading-relaxed">
+        <p class="mb-1.5"><strong class="text-[#d8b4fe]">补全规则：</strong></p>
+        <p>· 仅补全缺失字段（已有内容保留不动）</p>
+        <p>· 自动生成：实际发音 / 音素分拆 / 语义流转分析 / 标签</p>
+        <p>· 基于已内置的 19 初声 + 21 中声 + 9 终声音韵象征体系</p>
+        <p>· 每批发送 5 条，避免触发速率限制</p>
+      </div>
+      <div class="flex justify-end gap-2 pt-2">
+        <button onclick="closeAIModal()" class="px-4 py-2 text-sm rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 transition">取消</button>
+        <button onclick="runAICompletion()" id="ai-run-btn" class="px-4 py-2 text-sm rounded-lg bg-gradient-to-r from-[#a855f7] to-[#ec4899] text-white font-semibold transition">开始补全</button>
+      </div>
+    </div>
+
+    <div id="ai-progress-panel" class="hidden space-y-3">
+      <div class="flex items-center justify-between text-sm">
+        <span class="text-slate-300">进度</span>
+        <span id="ai-progress-text" class="text-[#d8b4fe] font-mono">0 / 0</span>
+      </div>
+      <div class="w-full bg-white/5 rounded-full h-2 overflow-hidden">
+        <div id="ai-progress-bar" class="bg-gradient-to-r from-[#a855f7] to-[#ec4899] h-2 transition-all duration-300" style="width:0%"></div>
+      </div>
+      <div id="ai-current" class="text-xs text-slate-400 font-mono">准备中...</div>
+      <div id="ai-log" class="text-xs text-slate-500 font-mono bg-black/30 rounded-lg p-3 max-h-48 overflow-y-auto space-y-0.5"></div>
+      <div class="flex justify-end gap-2 pt-2">
+        <button onclick="cancelAICompletion()" id="ai-cancel-btn" class="px-4 py-2 text-sm rounded-lg bg-[#f43f5e]/20 hover:bg-[#f43f5e]/30 border border-[#f43f5e]/40 text-[#fda4af] transition">停止</button>
+        <button onclick="closeAIModal()" id="ai-close-btn" class="hidden px-4 py-2 text-sm rounded-lg bg-[#38bdf8] hover:bg-[#0ea5e9] text-slate-900 font-semibold transition">完成</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================== Floating Help ============================== -->
+<div class="fixed bottom-4 left-4 z-30">
+  <details class="glass rounded-xl px-3 py-2 text-xs text-slate-400">
+    <summary class="cursor-pointer hover:text-slate-200">⌨ 快捷键</summary>
+    <div class="mt-2 space-y-1">
+      <div><kbd>/</kbd> 聚焦搜索</div>
+      <div><kbd>N</kbd> 新建词条</div>
+      <div><kbd>P</kbd> 批量粘贴</div>
+      <div><kbd>Esc</kbd> 关闭弹窗</div>
+      <div><kbd>1</kbd>~<kbd>9</kbd> 切换初声</div>
+    </div>
+  </details>
+</div>
+
+<script>
+// =========================================================================
+// CONSTANTS — 初声/中声/终声 音韵象征参考（取自 v11 体系）
+// =========================================================================
+const INITIALS = [
+  {idx:0,  char:'ㄱ', core:'舌根收紧·阻断截断'},
+  {idx:1,  char:'ㄲ', core:'强力紧收·爆裂'},
+  {idx:2,  char:'ㄴ', core:'舌尖轻触·柔和向前'},
+  {idx:3,  char:'ㄷ', core:'舌尖重击·闭合定格'},
+  {idx:4,  char:'ㄸ', core:'瞬间重击·爆发'},
+  {idx:5,  char:'ㄹ', core:'顺滑流转·滚动'},
+  {idx:6,  char:'ㅁ', core:'闭合容器·包容聚水'},
+  {idx:7,  char:'ㅂ', core:'双唇爆破·外展包裹'},
+  {idx:8,  char:'ㅃ', core:'强双唇爆破'},
+  {idx:9,  char:'ㅅ', core:'缝隙锐细·穿刺分离'},
+  {idx:10, char:'ㅆ', core:'强缝隙·破碎分离'},
+  {idx:11, char:'ㅇ', core:'空圆喉音·未满态'},
+  {idx:12, char:'ㅈ', core:'舌面阻隔·聚焦捏拢'},
+  {idx:13, char:'ㅉ', core:'强阻隔·紧捏聚集'},
+  {idx:14, char:'ㅊ', core:'送气突刺·冲出'},
+  {idx:15, char:'ㅋ', core:'送气截断·爆破'},
+  {idx:16, char:'ㅌ', core:'触底猛烈·爆开'},
+  {idx:17, char:'ㅍ', core:'表面爆裂·崩碎'},
+  {idx:18, char:'ㅎ', core:'能量耗散·气流归虚'},
+];
+
+const MEDIALS = [
+  {char:'ㅏ', core:'向外明亮·阳'},{char:'ㅐ', core:'向外延展·极'},
+  {char:'ㅑ', core:'向上向外·快'},{char:'ㅒ', core:'向上向外·快延'},
+  {char:'ㅓ', core:'向内暗沉·阴'},{char:'ㅔ', core:'向内收缩·极'},
+  {char:'ㅕ', core:'向内快速·收缩'},{char:'ㅖ', core:'向内快收·极'},
+  {char:'ㅗ', core:'向上凸起·显现'},{char:'ㅘ', core:'向上向外·突进'},
+  {char:'ㅙ', core:'全方位·外突'},{char:'ㅚ', core:'向上向外·凸升'},
+  {char:'ㅛ', core:'向上·柔和'},{char:'ㅜ', core:'向下深潜·蕴藏'},
+  {char:'ㅝ', core:'向下向内·潜收'},{char:'ㅞ', core:'向下内·潜收极'},
+  {char:'ㅟ', core:'向下内·深聚'},{char:'ㅠ', core:'向下·柔和深蕴'},
+  {char:'ㅡ', core:'水平大地·中性'},{char:'ㅢ', core:'内向·凝滞深收'},
+  {char:'ㅣ', core:'垂直极点·尖锐向前'},
+];
+
+const FINALS = [
+  {char:'∅', core:'发散延续·未定'},
+  {char:'ㄱ', core:'硬性截断·卡死锁定'},
+  {char:'ㄴ', core:'静态留存·向前沉淀'},
+  {char:'ㄷ', core:'硬截断·闭合定格'},
+  {char:'ㄹ', core:'顺滑流转·持续'},
+  {char:'ㅁ', core:'实体化·闭环名词化'},
+  {char:'ㅂ', core:'闭合锁闭·封存'},
+  {char:'ㅅ', core:'穿刺停止·触底'},
+  {char:'ㅇ', core:'未满态·留白'},
+];
+
+const STORAGE_KEY = 'korean_etymology_map_v1';
+
+// =========================================================================
+// STATE
+// =========================================================================
+let state = {
+  entries: [],          // all word entries
+  filter: {
+    initialIdx: null,   // selected initial index (0-18), null = none
+    root: null,         // selected root string
+    search: '',
+  },
+  selectedEntryId: null,
+  editingEntryId: null,
+};
+
+// =========================================================================
+// PERSISTENCE
+// =========================================================================
+function save() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state.entries));
+  } catch(e) {
+    toast('保存失败：' + e.message, 'error');
+  }
+}
+function load() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) state.entries = JSON.parse(raw);
+  } catch(e) {
+    console.error('Load failed:', e);
+    state.entries = [];
+  }
+}
+
+// =========================================================================
+// HELPERS
+// =========================================================================
+function uid() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+}
+
+function getInitialIdx(hangul) {
+  if (!hangul || typeof hangul !== 'string') return null;
+  const code = hangul.charCodeAt(0);
+  if (code < 0xAC00 || code > 0xD7A3) return null;
+  return Math.floor((code - 0xAC00) / 588);
+}
+function getInitialChar(hangul) {
+  const idx = getInitialIdx(hangul);
+  return idx !== null ? INITIALS[idx].char : '?';
+}
+function getDefaultRoot(hangul) {
+  return hangul ? hangul.charAt(0) : '';
+}
+function escapeHtml(s) {
+  if (s == null) return '';
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
+}
+
+// =========================================================================
+// STATS
+// =========================================================================
+function getEntryCountsByInitial() {
+  const counts = new Array(19).fill(0);
+  state.entries.forEach(e => {
+    const idx = getInitialIdx(e.hangul);
+    if (idx !== null) counts[idx]++;
+  });
+  return counts;
+}
+function getRootsForInitial(idx) {
+  const rootsMap = new Map();  // root -> count
+  state.entries.forEach(e => {
+    if (getInitialIdx(e.hangul) !== idx) return;
+    const r = e.root || getDefaultRoot(e.hangul);
+    rootsMap.set(r, (rootsMap.get(r) || 0) + 1);
+  });
+  return [...rootsMap.entries()].sort((a,b) => b[1] - a[1]);
+}
+function getEntriesForRoot(idx, root) {
+  return state.entries.filter(e =>
+    getInitialIdx(e.hangul) === idx && (e.root || getDefaultRoot(e.hangul)) === root
+  );
+}
+function getFilteredBySearch() {
+  const q = state.filter.search.trim().toLowerCase();
+  if (!q) return null;  // null = no search active
+  return state.entries.filter(e => {
+    const hay = [
+      e.hangul, e.roman, e.pron, e.meaning, e.decomp, e.analysis, e.notes,
+      (e.tags || []).join(' ')
+    ].filter(Boolean).join(' ').toLowerCase();
+    return hay.includes(q);
+  });
+}
+
+// =========================================================================
+// RENDER
+// =========================================================================
+function render() {
+  renderStats();
+  renderInitialGrid();
+  renderRootsList();
+  renderWordsList();
+  renderDetail();
+}
+
+function renderStats() {
+  const wordCount = state.entries.length;
+  const rootSet = new Set(state.entries.map(e => e.root || getDefaultRoot(e.hangul)));
+  const initSet = new Set(state.entries.map(e => getInitialIdx(e.hangul)).filter(x => x !== null));
+  document.getElementById('stat-words').textContent = wordCount;
+  document.getElementById('stat-roots').textContent = rootSet.size;
+  document.getElementById('stat-initials').textContent = initSet.size;
+}
+
+function renderInitialGrid() {
+  const grid = document.getElementById('initial-grid');
+  const counts = getEntryCountsByInitial();
+  const searchActive = !!state.filter.search.trim();
+
+  grid.innerHTML = INITIALS.map((init, i) => {
+    const isActive = !searchActive && state.filter.initialIdx === i;
+    const hasEntries = counts[i] > 0;
+    const classes = [
+      'initial-btn', 'glass', 'rounded-xl', 'p-3', 'flex', 'flex-col', 'items-center',
+      'justify-center', 'cursor-pointer', 'border',
+    ];
+    if (isActive) classes.push('active');
+    if (hasEntries) classes.push('has-entries');
+    return `
+      <button class="${classes.join(' ')}" onclick="selectInitial(${i})" title="${escapeHtml(init.core)}">
+        <span class="text-3xl font-bold ${hasEntries ? 'text-white' : 'text-slate-500'}">${init.char}</span>
+        <span class="text-[10px] text-slate-500 mt-1">${counts[i]}</span>
+      </button>
+    `;
+  }).join('');
+}
+
+function renderRootsList() {
+  const container = document.getElementById('roots-list');
+  const titleEl = document.getElementById('roots-title');
+  const countEl = document.getElementById('roots-count');
+
+  // If search active, show flat list of matching entries' roots
+  if (state.filter.search.trim()) {
+    const matches = getFilteredBySearch() || [];
+    titleEl.textContent = `搜索结果`;
+    countEl.textContent = `${matches.length} 条`;
+    if (matches.length === 0) {
+      container.innerHTML = emptyHint('未找到匹配词条', '尝试更换关键词');
+      return;
+    }
+    container.innerHTML = matches.map(e => {
+      const isActive = state.selectedEntryId === e.id;
+      return `
+        <div class="root-item ${isActive ? 'active' : ''} px-3 py-2 rounded-lg" onclick="selectEntry('${e.id}')">
+          <div class="flex items-baseline justify-between">
+            <span class="text-base font-bold text-white">${escapeHtml(e.hangul)}</span>
+            <span class="text-[10px] text-slate-500 font-mono">${escapeHtml(e.roman || '')}</span>
+          </div>
+          <div class="text-xs text-slate-400 truncate">${escapeHtml((e.meaning || '').split(/[;；]/)[0])}</div>
+        </div>
+      `;
+    }).join('');
+    return;
+  }
+
+  if (state.filter.initialIdx === null) {
+    titleEl.textContent = '词根列表';
+    countEl.textContent = '';
+    container.innerHTML = emptyHint(
+      '选择一个初声开始',
+      '点击上方任意初声按钮，查看其下所有词根'
+    );
+    return;
+  }
+
+  const init = INITIALS[state.filter.initialIdx];
+  const roots = getRootsForInitial(state.filter.initialIdx);
+  titleEl.innerHTML = `<span class="text-[#38bdf8] text-lg font-bold">${init.char}</span> 下词根`;
+  countEl.textContent = `${roots.length} 个词根 · ${state.entries.filter(e => getInitialIdx(e.hangul) === state.filter.initialIdx).length} 词条`;
+
+  if (roots.length === 0) {
+    container.innerHTML = emptyHint(
+      `${init.char} 暂无词条`,
+      `点击右侧"+ 添加到此词根"或使用批量粘贴`,
+      `<button onclick="quickAddForInitial()" class="mt-3 px-3 py-1.5 text-xs rounded-lg bg-[#38bdf8]/20 border border-[#38bdf8]/40 text-[#7dd3fc] hover:bg-[#38bdf8]/30 transition">+ 添加首条</button>`
+    );
+    return;
+  }
+
+  container.innerHTML = roots.map(([root, count]) => {
+    const isActive = state.filter.root === root;
+    return `
+      <div class="root-item ${isActive ? 'active' : ''} px-3 py-2 rounded-lg" onclick="selectRoot('${escapeHtml(root)}')">
+        <div class="flex items-baseline justify-between">
+          <span class="text-xl font-bold text-white">${escapeHtml(root)}</span>
+          <span class="text-xs text-slate-500">${count}</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderWordsList() {
+  const container = document.getElementById('words-list');
+  const titleEl = document.getElementById('words-title');
+
+  if (state.filter.search.trim()) {
+    titleEl.textContent = '点击左侧词条查看详情';
+    container.innerHTML = emptyHint('← 请从左侧选择', '查看完整词义与解析');
+    return;
+  }
+
+  if (state.filter.initialIdx === null) {
+    titleEl.textContent = '词条';
+    container.innerHTML = emptyHint('← 请先选择初声', '然后选择词根');
+    return;
+  }
+  if (!state.filter.root) {
+    titleEl.textContent = '词条';
+    container.innerHTML = emptyHint('← 请先选择词根', '查看该词根下的所有词');
+    return;
+  }
+
+  const entries = getEntriesForRoot(state.filter.initialIdx, state.filter.root);
+  const init = INITIALS[state.filter.initialIdx];
+  titleEl.innerHTML = `<span class="text-[#f43f5e] text-lg font-bold">${escapeHtml(state.filter.root)}</span> 下词条`;
+
+  if (entries.length === 0) {
+    container.innerHTML = emptyHint('暂无词条', '点击右上角"+ 添加到此词根"');
+    return;
+  }
+
+  container.innerHTML = entries.map(e => {
+    const isActive = state.selectedEntryId === e.id;
+    const senses = (e.meaning || '').split(/[;；]/).map(s => s.trim()).filter(Boolean);
+    const tags = (e.tags || []).map(t => `<span class="tag-pill">${escapeHtml(t)}</span>`).join('');
+    return `
+      <div class="word-item ${isActive ? 'active' : ''} px-3 py-2.5 rounded-lg border border-white/5 fade-in" onclick="selectEntry('${e.id}')">
+        <div class="flex items-baseline justify-between mb-1">
+          <span class="text-xl font-bold text-white">${escapeHtml(e.hangul)}</span>
+          <span class="text-xs text-slate-500 font-mono">${escapeHtml(e.roman || '')}</span>
+        </div>
+        ${e.pron ? `<div class="text-[10px] text-[#fbbf24] font-mono mb-1">${escapeHtml(e.pron)}</div>` : ''}
+        <div class="text-xs text-slate-300 space-y-0.5">
+          ${senses.map(s => `<div>· ${escapeHtml(s)}</div>`).join('')}
+        </div>
+        ${tags ? `<div class="mt-1.5">${tags}</div>` : ''}
+      </div>
+    `;
+  }).join('');
+}
+
+function renderDetail() {
+  const panel = document.getElementById('detail-panel');
+  if (!state.selectedEntryId) {
+    panel.innerHTML = emptyHint(
+      '← 选择一个词条',
+      '查看完整释义、音素分拆、语义流转分析与笔记',
+      `<div class="mt-4 text-xs text-slate-500 leading-relaxed text-left max-w-md">
+        <p class="mb-2"><span class="text-[#7dd3fc]">💡 使用提示</span></p>
+        <p>1. 点击上方初声按钮进入对应音系</p>
+        <p>2. 选择词根查看同源词簇</p>
+        <p>3. 选择词条查看/编辑详情</p>
+        <p>4. 使用 <kbd>/</kbd> 快速搜索，<kbd>N</kbd> 新建，<kbd>P</kbd> 批量粘贴</p>
+        <p>5. 所有数据自动保存在浏览器本地</p>
+      </div>`
+    );
+    return;
+  }
+
+  const e = state.entries.find(x => x.id === state.selectedEntryId);
+  if (!e) {
+    panel.innerHTML = emptyHint('词条不存在', '');
+    return;
+  }
+
+  const initIdx = getInitialIdx(e.hangul);
+  const init = initIdx !== null ? INITIALS[initIdx] : null;
+  const senses = (e.meaning || '').split(/[;；]/).map(s => s.trim()).filter(Boolean);
+  const tagsHtml = (e.tags || []).map(t => `<span class="tag-pill">${escapeHtml(t)}</span>`).join('');
+
+  panel.innerHTML = `
+    <div class="fade-in">
+      <!-- Header -->
+      <div class="flex items-start justify-between mb-4">
+        <div>
+          <div class="flex items-baseline gap-3 flex-wrap">
+            <h2 class="text-5xl font-bold text-white">${escapeHtml(e.hangul)}</h2>
+            ${e.pron ? `<span class="text-lg text-[#fbbf24] font-mono">${escapeHtml(e.pron)}</span>` : ''}
+            ${e.roman ? `<span class="text-base text-slate-400 font-mono">/${escapeHtml(e.roman)}/</span>` : ''}
+          </div>
+          <div class="flex items-center gap-2 mt-2 text-xs text-slate-500">
+            ${init ? `<span>初声 <span class="text-[#38bdf8] font-bold text-base">${init.char}</span> · ${escapeHtml(init.core)}</span>` : ''}
+            <span class="text-slate-600">|</span>
+            <span>词根 <span class="text-[#f43f5e] font-bold">${escapeHtml(e.root || getDefaultRoot(e.hangul))}</span></span>
+          </div>
+        </div>
+        <div class="flex gap-1">
+          <button onclick="editEntry('${e.id}')" class="px-3 py-1.5 text-xs rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 transition">✎ 编辑</button>
+          <button onclick="deleteEntry('${e.id}')" class="px-3 py-1.5 text-xs rounded-lg bg-[#f43f5e]/10 hover:bg-[#f43f5e]/25 border border-[#f43f5e]/30 text-[#fda4af] transition">✕ 删除</button>
+        </div>
+      </div>
+
+      <!-- Meanings -->
+      <div class="mb-4">
+        <div class="text-xs text-slate-400 uppercase tracking-wider mb-2">释义 Meaning</div>
+        <div class="space-y-1.5">
+          ${senses.map((s, i) => `
+            <div class="flex gap-2 items-start">
+              <span class="text-[#fbbf24] font-bold text-sm min-w-[20px]">${i + 1}.</span>
+              <span class="text-base text-slate-100">${escapeHtml(s)}</span>
+            </div>
+          `).join('') || '<span class="text-slate-500 text-sm italic">（无）</span>'}
+        </div>
+      </div>
+
+      <!-- Decomposition -->
+      ${e.decomp ? `
+        <div class="mb-4">
+          <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">音素分拆 Decomposition</div>
+          <div class="text-sm text-[#38bdf8] bg-[#38bdf8]/5 px-3 py-2 rounded-lg border border-[#38bdf8]/15">${escapeHtml(e.decomp)}</div>
+        </div>
+      ` : ''}
+
+      <!-- Analysis -->
+      ${e.analysis ? `
+        <div class="mb-4">
+          <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">语义流转分析 Analysis</div>
+          <div class="text-sm text-slate-200 leading-relaxed bg-white/[0.03] px-3 py-2 rounded-lg border border-white/5">${escapeHtml(e.analysis)}</div>
+        </div>
+      ` : ''}
+
+      <!-- Tags -->
+      ${tagsHtml ? `
+        <div class="mb-4">
+          <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">标签 Tags</div>
+          <div>${tagsHtml}</div>
+        </div>
+      ` : ''}
+
+      <!-- Notes -->
+      ${e.notes ? `
+        <div class="mb-4">
+          <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">📝 私人笔记 Notes</div>
+          <div class="text-sm text-slate-300 italic leading-relaxed bg-[#fbbf24]/[0.04] px-3 py-2 rounded-lg border border-[#fbbf24]/15 whitespace-pre-wrap">${escapeHtml(e.notes)}</div>
+        </div>
+      ` : ''}
+
+      <!-- Metadata -->
+      <div class="text-[10px] text-slate-600 mt-6 pt-3 border-t border-white/5">
+        ${e.createdAt ? `创建于 ${new Date(e.createdAt).toLocaleString('zh-CN')}` : ''}
+        ${e.updatedAt && e.updatedAt !== e.createdAt ? ` · 更新于 ${new Date(e.updatedAt).toLocaleString('zh-CN')}` : ''}
+      </div>
+    </div>
+  `;
+}
+
+function emptyHint(title, subtitle, extraHtml = '') {
+  return `
+    <div class="flex flex-col items-center justify-center text-center py-12 px-4">
+      <div class="text-4xl mb-3 opacity-30">◯</div>
+      <p class="text-slate-300 text-sm font-medium mb-1">${escapeHtml(title)}</p>
+      ${subtitle ? `<p class="text-slate-500 text-xs">${escapeHtml(subtitle)}</p>` : ''}
+      ${extraHtml}
+    </div>
+  `;
+}
+
+function renderReferencePanel() {
+  const panel = document.getElementById('reference-panel');
+  const sec = (title, items, accent) => `
+    <div class="glass rounded-xl p-3">
+      <div class="text-xs font-semibold text-${accent}-300 mb-2 uppercase tracking-wider">${title}</div>
+      <div class="space-y-1">
+        ${items.map(it => `
+          <div class="flex items-baseline gap-2">
+            <span class="text-lg font-bold text-${accent}-200 min-w-[24px]">${it.char}</span>
+            <span class="text-slate-400 text-xs">${escapeHtml(it.core)}</span>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+  panel.innerHTML =
+    sec('初声 19', INITIALS, 'cyan') +
+    sec('中声 21', MEDIALS, 'rose') +
+    sec('终声 9', FINALS, 'emerald');
+}
+
+// =========================================================================
+// SELECTORS / NAVIGATION
+// =========================================================================
+function selectInitial(idx) {
+  // Toggle off if same
+  if (state.filter.initialIdx === idx) {
+    state.filter.initialIdx = null;
+    state.filter.root = null;
+  } else {
+    state.filter.initialIdx = idx;
+    state.filter.root = null;
+  }
+  clearSearchSilent();
+  render();
+}
+
+function selectRoot(root) {
+  state.filter.root = root;
+  render();
+}
+
+function selectEntry(id) {
+  state.selectedEntryId = id;
+  render();
+}
+
+// =========================================================================
+// SEARCH
+// =========================================================================
+function onSearch(value) {
+  state.filter.search = value;
+  document.getElementById('search-clear').classList.toggle('hidden', !value.trim());
+  render();
+}
+function clearSearch() {
+  document.getElementById('search-input').value = '';
+  onSearch('');
+}
+function clearSearchSilent() {
+  document.getElementById('search-input').value = '';
+  document.getElementById('search-clear').classList.add('hidden');
+  state.filter.search = '';
+}
+
+// =========================================================================
+// ADD / EDIT MODAL
+// =========================================================================
+function openAddModal(entry = null) {
+  state.editingEntryId = entry ? entry.id : null;
+  document.getElementById('add-modal-title').textContent = entry ? '编辑词条' : '新增词条';
+
+  document.getElementById('add-hangul').value = entry?.hangul || '';
+  document.getElementById('add-roman').value = entry?.roman || '';
+  document.getElementById('add-root').value = entry?.root || '';
+  document.getElementById('add-pron').value = entry?.pron || '';
+  document.getElementById('add-meaning').value = entry?.meaning || '';
+  document.getElementById('add-decomp').value = entry?.decomp || '';
+  document.getElementById('add-analysis').value = entry?.analysis || '';
+  document.getElementById('add-tags').value = (entry?.tags || []).join(' ');
+  document.getElementById('add-notes').value = entry?.notes || '';
+
+  document.getElementById('add-modal').classList.remove('hidden');
+  setTimeout(() => document.getElementById('add-hangul').focus(), 50);
+}
+
+function closeAddModal() {
+  document.getElementById('add-modal').classList.add('hidden');
+  state.editingEntryId = null;
+}
+
+function autofillFromHangul() {
+  const hangul = document.getElementById('add-hangul').value.trim();
+  if (!hangul) return;
+  // Auto-fill root if empty
+  const rootField = document.getElementById('add-root');
+  if (!rootField.value) rootField.value = getDefaultRoot(hangul);
+}
+
+function saveEntry() {
+  const hangul = document.getElementById('add-hangul').value.trim();
+  const meaning = document.getElementById('add-meaning').value.trim();
+  if (!hangul) { toast('请填写 한글 词形', 'error'); return; }
+  if (!meaning) { toast('请填写释义', 'error'); return; }
+
+  const data = {
+    hangul,
+    roman: document.getElementById('add-roman').value.trim(),
+    root: document.getElementById('add-root').value.trim() || getDefaultRoot(hangul),
+    pron: document.getElementById('add-pron').value.trim(),
+    meaning,
+    decomp: document.getElementById('add-decomp').value.trim(),
+    analysis: document.getElementById('add-analysis').value.trim(),
+    tags: document.getElementById('add-tags').value.trim().split(/\s+/).filter(Boolean),
+    notes: document.getElementById('add-notes').value.trim(),
+  };
+
+  if (state.editingEntryId) {
+    // Update existing
+    const idx = state.entries.findIndex(e => e.id === state.editingEntryId);
+    if (idx >= 0) {
+      data.id = state.editingEntryId;
+      data.createdAt = state.entries[idx].createdAt;
+      data.updatedAt = Date.now();
+      state.entries[idx] = data;
+      toast('已更新', 'success');
+    }
+  } else {
+    // Create new
+    data.id = uid();
+    data.createdAt = Date.now();
+    data.updatedAt = data.createdAt;
+    state.entries.push(data);
+    state.selectedEntryId = data.id;
+    // Auto-navigate to its initial+root
+    const initIdx = getInitialIdx(hangul);
+    if (initIdx !== null) {
+      state.filter.initialIdx = initIdx;
+      state.filter.root = data.root;
+    }
+    toast(`已添加：${hangul}`, 'success');
+  }
+
+  save();
+  closeAddModal();
+  render();
+}
+
+function editEntry(id) {
+  const e = state.entries.find(x => x.id === id);
+  if (e) openAddModal(e);
+}
+
+function deleteEntry(id) {
+  const e = state.entries.find(x => x.id === id);
+  if (!e) return;
+  if (!confirm(`确定删除 "${e.hangul}"？此操作不可撤销。`)) return;
+  state.entries = state.entries.filter(x => x.id !== id);
+  if (state.selectedEntryId === id) state.selectedEntryId = null;
+  save();
+  render();
+  toast(`已删除：${e.hangul}`, 'success');
+}
+
+function quickAddForCurrentRoot() {
+  if (state.filter.initialIdx === null || !state.filter.root) {
+    openAddModal();
+    return;
+  }
+  openAddModal();
+  // Pre-fill root + initial
+  document.getElementById('add-root').value = state.filter.root;
+  toast(`已预填词根：${state.filter.root}`, 'info');
+}
+
+function quickAddForInitial() {
+  if (state.filter.initialIdx === null) return;
+  const init = INITIALS[state.filter.initialIdx];
+  openAddModal();
+  toast(`为初声 ${init.char} 添加新词`, 'info');
+}
+
+// =========================================================================
+// BULK PASTE
+// =========================================================================
+function openPasteModal() {
+  document.getElementById('paste-modal').classList.remove('hidden');
+  document.getElementById('paste-preview').classList.add('hidden');
+  setTimeout(() => document.getElementById('paste-textarea').focus(), 50);
+}
+function closePasteModal() {
+  document.getElementById('paste-modal').classList.add('hidden');
+}
+
+function parseBulkText(text) {
+  const entries = [];
+  // Split by newlines, process each non-empty line
+  const lines = text.split(/\r?\n/);
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line) continue;
+    // Pattern: 한글 (roman)：meaning. or 한글 (roman): meaning
+    // Allow Chinese full-width or ASCII punctuation
+    const m = line.match(/^([\uac00-\ud7a3]+)\s*[（(]\s*([^)）]+)\s*[)）]\s*[：:]\s*(.+?)[。.]?\s*$/);
+    if (m) {
+      const hangul = m[1].trim();
+      const roman = m[2].trim();
+      const meaning = m[3].trim();
+      entries.push({
+        id: uid(),
+        hangul,
+        roman,
+        root: getDefaultRoot(hangul),
+        pron: '',
+        meaning,
+        decomp: '',
+        analysis: '',
+        tags: [],
+        notes: '',
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+    }
+  }
+  return entries;
+}
+
+function previewPaste() {
+  const text = document.getElementById('paste-textarea').value;
+  const entries = parseBulkText(text);
+  const prev = document.getElementById('paste-preview');
+  prev.classList.remove('hidden');
+  if (entries.length === 0) {
+    prev.innerHTML = `<span class="text-[#fda4af]">⚠ 未解析到任何词条，请检查格式</span>`;
+  } else {
+    const byInit = {};
+    entries.forEach(e => {
+      const c = getInitialChar(e.hangul);
+      byInit[c] = (byInit[c] || 0) + 1;
+    });
+    const breakdown = Object.entries(byInit).map(([c, n]) => `<span class="text-[#7dd3fc]">${c}</span>:${n}`).join(' · ');
+    prev.innerHTML = `✓ 解析到 <span class="text-[#34d399] font-bold">${entries.length}</span> 条 · ${breakdown}`;
+  }
+}
+
+function confirmPaste() {
+  const text = document.getElementById('paste-textarea').value;
+  const entries = parseBulkText(text);
+  if (entries.length === 0) {
+    toast('未解析到任何词条', 'error');
+    return;
+  }
+  state.entries.push(...entries);
+  save();
+  closePasteModal();
+  document.getElementById('paste-textarea').value = '';
+  // Navigate to first entry's initial
+  const first = entries[0];
+  const initIdx = getInitialIdx(first.hangul);
+  if (initIdx !== null) {
+    state.filter.initialIdx = initIdx;
+    state.filter.root = first.root;
+    state.selectedEntryId = first.id;
+  }
+  render();
+  toast(`成功导入 ${entries.length} 条词条`, 'success');
+}
+
+// =========================================================================
+// EXPORT / IMPORT
+// =========================================================================
+function exportJSON() {
+  if (state.entries.length === 0) {
+    toast('暂无数据可导出', 'error');
+    return;
+  }
+  const data = {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    count: state.entries.length,
+    entries: state.entries,
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `korean_etymology_map_${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast(`已导出 ${state.entries.length} 条`, 'success');
+}
+
+function importJSON(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+      const incoming = Array.isArray(data) ? data : (data.entries || []);
+      if (!Array.isArray(incoming)) throw new Error('格式错误');
+      // Merge: skip entries with same id
+      const existingIds = new Set(state.entries.map(x => x.id));
+      let added = 0;
+      for (const ent of incoming) {
+        if (!ent.hangul) continue;
+        const newEnt = {
+          id: ent.id && !existingIds.has(ent.id) ? ent.id : uid(),
+          hangul: ent.hangul,
+          roman: ent.roman || '',
+          root: ent.root || getDefaultRoot(ent.hangul),
+          pron: ent.pron || '',
+          meaning: ent.meaning || '',
+          decomp: ent.decomp || '',
+          analysis: ent.analysis || '',
+          tags: ent.tags || [],
+          notes: ent.notes || '',
+          createdAt: ent.createdAt || Date.now(),
+          updatedAt: Date.now(),
+        };
+        state.entries.push(newEnt);
+        added++;
+      }
+      save();
+      render();
+      toast(`导入成功：新增 ${added} 条`, 'success');
+    } catch(err) {
+      toast('导入失败：' + err.message, 'error');
+    }
+    event.target.value = '';  // reset input
+  };
+  reader.readAsText(file);
+}
+
+function confirmReset() {
+  if (state.entries.length === 0) {
+    toast('当前无数据', 'info');
+    return;
+  }
+  if (!confirm(`确定清空所有 ${state.entries.length} 条词条？建议先导出备份。此操作不可撤销。`)) return;
+  if (!confirm('再次确认：真的要清空全部数据吗？')) return;
+  state.entries = [];
+  state.selectedEntryId = null;
+  state.filter = { initialIdx: null, root: null, search: '' };
+  save();
+  render();
+  toast('已清空', 'success');
+}
+
+// =========================================================================
+// LLM SETTINGS & API INTEGRATION
+// =========================================================================
+const SETTINGS_KEY = 'korean_etymology_llm_settings_v1';
+const PROVIDER_PRESETS = {
+  glm_anthropic: {
+    endpoint: 'https://open.bigmodel.cn/api/anthropic/v1/messages',
+    model: 'GLM-4.5-air',
+    label: '智谱 GLM (Anthropic 兼容) ⭐ 推荐',
+    protocol: 'anthropic',
+  },
+  glm: {
+    endpoint: 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
+    model: 'glm-4-flash',
+    label: '智谱 GLM (OpenAI 兼容 v4)',
+    protocol: 'openai',
+  },
+  anthropic: {
+    endpoint: 'https://api.anthropic.com/v1/messages',
+    model: 'claude-sonnet-4-6',
+    label: 'Claude (Anthropic 官方)',
+    protocol: 'anthropic',
+  },
+  openai: {
+    endpoint: 'https://api.openai.com/v1/chat/completions',
+    model: 'gpt-4o',
+    label: 'OpenAI GPT',
+    protocol: 'openai',
+  },
+  deepseek: {
+    endpoint: 'https://api.deepseek.com/v1/chat/completions',
+    model: 'deepseek-chat',
+    label: 'DeepSeek',
+    protocol: 'openai',
+  },
+  moonshot: {
+    endpoint: 'https://api.moonshot.cn/v1/chat/completions',
+    model: 'moonshot-v1-8k',
+    label: 'Moonshot Kimi',
+    protocol: 'openai',
+  },
+  custom: {
+    endpoint: '',
+    model: '',
+    label: '自定义',
+    protocol: 'openai',
+  },
+};
+
+let llmSettings = {
+  provider: 'glm_anthropic',
+  endpoint: PROVIDER_PRESETS.glm_anthropic.endpoint,
+  model: PROVIDER_PRESETS.glm_anthropic.model,
+  apiKey: '',
+  useProxy: false,  // GLM supports CORS natively — proxy only needed for some providers
+};
+
+// AI completion state
+let aiState = {
+  running: false,
+  cancelRequested: false,
+};
+
+function loadSettings() {
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    if (raw) {
+      const saved = JSON.parse(raw);
+      // Merge but reset provider/endpoint/model if the saved provider no longer exists
+      // (e.g. old 'glm' preset was renamed). This prevents broken configs after updates.
+      if (saved.provider && !PROVIDER_PRESETS[saved.provider]) {
+        delete saved.provider;
+        delete saved.endpoint;
+        delete saved.model;
+      }
+      llmSettings = { ...llmSettings, ...saved };
+    }
+  } catch(e) { console.error(e); }
+}
+function saveSettingsToStorage() {
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(llmSettings));
+}
+
+function openSettingsModal() {
+  document.getElementById('set-provider').value = llmSettings.provider;
+  document.getElementById('set-endpoint').value = llmSettings.endpoint;
+  document.getElementById('set-model').value = llmSettings.model;
+  document.getElementById('set-apikey').value = llmSettings.apiKey;
+  document.getElementById('set-use-proxy').checked = !!llmSettings.useProxy;
+  document.getElementById('settings-modal').classList.remove('hidden');
+}
+function closeSettingsModal() {
+  document.getElementById('settings-modal').classList.add('hidden');
+}
+function onProviderChange() {
+  const p = document.getElementById('set-provider').value;
+  const preset = PROVIDER_PRESETS[p];
+  if (preset) {
+    document.getElementById('set-endpoint').value = preset.endpoint;
+    document.getElementById('set-model').value = preset.model;
+  }
+}
+function toggleKeyVisibility() {
+  const inp = document.getElementById('set-apikey');
+  const btn = document.getElementById('key-vis-btn');
+  if (inp.type === 'password') {
+    inp.type = 'text';
+    btn.textContent = '隐藏';
+  } else {
+    inp.type = 'password';
+    btn.textContent = '显示';
+  }
+}
+function saveSettings() {
+  llmSettings.provider = document.getElementById('set-provider').value;
+  llmSettings.endpoint = document.getElementById('set-endpoint').value.trim();
+  llmSettings.model = document.getElementById('set-model').value.trim();
+  llmSettings.apiKey = document.getElementById('set-apikey').value.trim();
+  llmSettings.useProxy = document.getElementById('set-use-proxy').checked;
+  saveSettingsToStorage();
+  closeSettingsModal();
+  toast('LLM 设置已保存', 'success');
+  updateAIButton();
+}
+
+function copyProxyCmd() {
+  const cmd = 'python3 ' + location.pathname.replace(/[^/]*$/, '') + 'glm_proxy.py';
+  navigator.clipboard.writeText('python3 glm_proxy.py').then(() => {
+    toast('已复制：python3 glm_proxy.py', 'success');
+  }).catch(() => {
+    toast('请手动复制：python3 glm_proxy.py', 'info');
+  });
+}
+
+function updateAIButton() {
+  const btn = document.getElementById('ai-btn');
+  if (!llmSettings.apiKey) {
+    btn.classList.add('opacity-60');
+    btn.title = '点击配置 API Key 后使用';
+  } else {
+    btn.classList.remove('opacity-60');
+    btn.title = '';
+  }
+}
+
+async function testConnection() {
+  if (!llmSettings.apiKey && !document.getElementById('set-apikey').value) {
+    toast('请先填写 API Key', 'error');
+    return;
+  }
+  // Temporarily pull values from form (so user can test before saving)
+  const tempSettings = {
+    provider: document.getElementById('set-provider').value,
+    endpoint: document.getElementById('set-endpoint').value.trim(),
+    model: document.getElementById('set-model').value.trim(),
+    apiKey: document.getElementById('set-apikey').value.trim(),
+    useProxy: document.getElementById('set-use-proxy').checked,
+  };
+  const actualEndpoint = resolveEndpoint(tempSettings);
+  const btn = document.getElementById('test-conn-btn');
+  btn.textContent = '⏳ 测试中...';
+  btn.disabled = true;
+  console.log('[LLM Test] endpoint:', actualEndpoint, '| model:', tempSettings.model, '| protocol:', PROVIDER_PRESETS[tempSettings.provider]?.protocol);
+  try {
+    const resp = await callLLM(tempSettings, '请只输出 JSON: {"ok":true}', 50);
+    toast(`✓ 连接成功 · ${tempSettings.model} · ${tempSettings.useProxy ? '代理' : '直连'}`, 'success');
+  } catch(e) {
+    let msg = e.message;
+    // Add actionable hint for common errors
+    if (msg.includes('CORS') || msg.includes('Failed to fetch') || msg.includes('网络请求失败')) {
+      msg += '\n→ 试试：① 取消「使用本地代理」勾选  ② 或运行 python3 glm_proxy.py 后勾选';
+    } else if (msg.includes('无法连接本地代理')) {
+      msg += '\n→ 解决：终端运行 python3 glm_proxy.py 启动代理';
+    } else if (msg.includes('401') || msg.includes('403')) {
+      msg += '\n→ 解决：检查 API Key 是否正确/未过期';
+    } else if (msg.includes('404')) {
+      msg += '\n→ 解决：检查模型名 — Anthropic 协议用 GLM-4.5-air，v4 协议用 glm-4-flash';
+    }
+    toast('✗ ' + msg, 'error');
+    console.error('[LLM Test] failed:', e);
+  } finally {
+    btn.textContent = '🔗 测试连接';
+    btn.disabled = false;
+  }
+}
+
+// Core LLM call - returns text response
+async function callLLM(settings, prompt, maxTokens = 4096) {
+  if (!settings.apiKey) throw new Error('未配置 API Key');
+  // Determine protocol from preset (or fall back to provider name)
+  const preset = PROVIDER_PRESETS[settings.provider];
+  const protocol = preset?.protocol || (settings.provider === 'anthropic' ? 'anthropic' : 'openai');
+  if (protocol === 'anthropic') {
+    return await callAnthropic(settings, prompt, maxTokens);
+  }
+  return await callOpenAI(settings, prompt, maxTokens);
+}
+
+function resolveEndpoint(settings) {
+  // If useProxy is on, route through local CORS proxy at localhost:8787
+  if (settings.useProxy) {
+    const stripped = settings.endpoint.replace(/^https?:\/\//, '');
+    return 'http://localhost:8787/' + stripped;
+  }
+  return settings.endpoint;
+}
+
+async function safeFetch(url, options) {
+  let res;
+  try {
+    res = await fetch(url, options);
+  } catch (networkErr) {
+    // fetch() throws TypeError on network/CORS failure
+    if (url.startsWith('http://localhost')) {
+      throw new Error('无法连接本地代理 — 请确认已在终端运行 python3 glm_proxy.py');
+    }
+    throw new Error('网络请求失败（多半是 CORS 跨域拦截）— 请在 ⚙ 设置中勾选「使用本地代理」');
+  }
+  return res;
+}
+
+async function callAnthropic(settings, prompt, maxTokens) {
+  const res = await safeFetch(resolveEndpoint(settings), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': settings.apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model: settings.model,
+      max_tokens: maxTokens,
+      messages: [{ role: 'user', content: prompt }],
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`HTTP ${res.status}: ${err.slice(0, 200)}`);
+  }
+  const data = await res.json();
+  return data.content?.[0]?.text || '';
+}
+
+async function callOpenAI(settings, prompt, maxTokens) {
+  const res = await safeFetch(resolveEndpoint(settings), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${settings.apiKey}`,
+    },
+    body: JSON.stringify({
+      model: settings.model,
+      messages: [{ role: 'user', content: prompt }],
+      max_tokens: maxTokens,
+      temperature: 0.7,
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`HTTP ${res.status}: ${err.slice(0, 300)}`);
+  }
+  const data = await res.json();
+  return data.choices?.[0]?.message?.content || '';
+}
+
+// =========================================================================
+// AI COMPLETION WORKFLOW
+// =========================================================================
+function buildPhoneticReference() {
+  const init = INITIALS.map(i => `${i.char}=${i.core}`).join('; ');
+  const med = MEDIALS.map(i => `${i.char}=${i.core}`).join('; ');
+  const fin = FINALS.map(i => `${i.char}=${i.core}`).join('; ');
+  return `【初声】${init}\n【中声】${med}\n【终声】${fin}`;
+}
+
+function findIncompleteEntries() {
+  return state.entries.filter(e => {
+    return !e.decomp || !e.analysis || !e.pron || !e.roman || (e.tags || []).length === 0;
+  });
+}
+
+function openAIModal() {
+  if (!llmSettings.apiKey) {
+    toast('请先在 ⚙ 设置中填写 API Key', 'error');
+    openSettingsModal();
+    return;
+  }
+  const incomplete = findIncompleteEntries();
+  const panel = document.getElementById('ai-scan-result');
+  if (incomplete.length === 0) {
+    panel.innerHTML = `<div class="text-center py-6">
+      <div class="text-3xl mb-2">✓</div>
+      <p class="text-[#6ee7b7]">所有 ${state.entries.length} 条词条字段均已完整，无需补全。</p>
+    </div>`;
+    document.getElementById('ai-run-btn').disabled = true;
+    document.getElementById('ai-run-btn').classList.add('opacity-50', 'cursor-not-allowed');
+  } else {
+    const missDecomp = incomplete.filter(e => !e.decomp).length;
+    const missAnalysis = incomplete.filter(e => !e.analysis).length;
+    const missPron = incomplete.filter(e => !e.pron).length;
+    const missRoman = incomplete.filter(e => !e.roman).length;
+    const missTags = incomplete.filter(e => (e.tags || []).length === 0).length;
+    const batches = Math.ceil(incomplete.length / 5);
+    panel.innerHTML = `
+      <div class="bg-white/[0.03] border border-white/10 rounded-lg p-4">
+        <div class="text-base text-slate-200 mb-2">扫描发现 <span class="text-[#d8b4fe] font-bold text-lg">${incomplete.length}</span> 条词条存在缺失字段：</div>
+        <div class="grid grid-cols-2 gap-2 text-xs text-slate-400 mt-3">
+          <div>缺音素分拆：<span class="text-[#fbbf24] font-bold">${missDecomp}</span></div>
+          <div>缺语义分析：<span class="text-[#fbbf24] font-bold">${missAnalysis}</span></div>
+          <div>缺实际发音：<span class="text-[#fbbf24] font-bold">${missPron}</span></div>
+          <div>缺拉丁化：<span class="text-[#fbbf24] font-bold">${missRoman}</span></div>
+          <div>缺标签：<span class="text-[#fbbf24] font-bold">${missTags}</span></div>
+          <div>预计调用：<span class="text-[#34d399] font-bold">${batches} 次</span></div>
+        </div>
+      </div>
+    `;
+    document.getElementById('ai-run-btn').disabled = false;
+    document.getElementById('ai-run-btn').classList.remove('opacity-50', 'cursor-not-allowed');
+  }
+  document.getElementById('ai-scan-panel').classList.remove('hidden');
+  document.getElementById('ai-progress-panel').classList.add('hidden');
+  document.getElementById('ai-modal').classList.remove('hidden');
+}
+function closeAIModal() {
+  if (aiState.running) {
+    toast('正在运行中，请先停止', 'info');
+    return;
+  }
+  document.getElementById('ai-modal').classList.add('hidden');
+}
+
+function cancelAICompletion() {
+  aiState.cancelRequested = true;
+  toast('停止请求已发送...', 'info');
+}
+
+function aiLog(msg, type = 'info') {
+  const colors = { info: 'text-slate-400', success: 'text-[#6ee7b7]', error: 'text-[#fda4af]' };
+  const log = document.getElementById('ai-log');
+  const line = document.createElement('div');
+  line.className = colors[type] || colors.info;
+  line.textContent = `[${new Date().toLocaleTimeString('zh-CN')}] ${msg}`;
+  log.appendChild(line);
+  log.scrollTop = log.scrollHeight;
+}
+
+function updateAIProgress(done, total, current) {
+  const pct = total > 0 ? (done / total) * 100 : 0;
+  document.getElementById('ai-progress-bar').style.width = pct + '%';
+  document.getElementById('ai-progress-text').textContent = `${done} / ${total}`;
+  if (current) document.getElementById('ai-current').textContent = `当前: ${current}`;
+}
+
+function buildCompletionPrompt(batch) {
+  const wordList = batch.map((e, i) => {
+    const senses = (e.meaning || '').split(/[;；]/).map(s => s.trim()).filter(Boolean).join(' / ');
+    return `${i + 1}. ${e.hangul} | 罗马化: ${e.roman || '待生成'} | 释义: ${senses || '待你根据词形推断'}`;
+  }).join('\n');
+
+  return `你是韩语音韵象征（음성상징）专家。请基于以下音韵象征参考体系，为每个韩语词补全字段。
+
+${buildPhoneticReference()}
+
+【任务】
+请为下列词条生成：
+- pron: 实际发音（应用韵尾音变规则，如 맛→[맏]、낮→[낟]、꽃→[꼳]、앉다→[안따]）
+- roman: 文化观光部标准罗马化（如 맛=mat、사람=saram、찌다=jjida）
+- decomp: 音素分拆，使用谚文音节块+括号语义描述，多音节用 + 连接，如 "마(接触)+ㅅ(细微渗透)" 或 "찌(强紧聚集)+르(顺滑流转)+다(动作化)"
+- analysis: 一句流畅中文，描述音韵如何流转出词义，以句号结尾
+- tags: 1-4 个分类标签（中文，空格分隔）
+
+【词条】
+${wordList}
+
+【输出要求】
+仅输出严格 JSON，无任何额外文字、无 markdown 代码块。格式：
+{"results":[{"hangul":"찌다","pron":"[찌다]","roman":"jjida","decomp":"찌(强紧聚集)+다(动作化)","analysis":"强力紧捏...。","tags":["烹饪","气象"]}, ...]}
+
+每个 hangul 必须与输入完全对应。`;
+}
+
+function extractJSON(text) {
+  // Strip markdown code fences if present
+  let t = text.trim();
+  t = t.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '');
+  // Find first { and last }
+  const start = t.indexOf('{');
+  const end = t.lastIndexOf('}');
+  if (start < 0 || end < 0) throw new Error('响应中未找到 JSON');
+  return JSON.parse(t.slice(start, end + 1));
+}
+
+function applyCompletions(batch, results) {
+  let updated = 0;
+  for (const r of (results.results || [])) {
+    // Find matching entry by hangul (first match in batch)
+    const target = batch.find(e => e.hangul === r.hangul && (
+      !e.decomp || !e.analysis || !e.pron || !e.roman || (e.tags || []).length === 0
+    ));
+    if (!target) continue;
+    // Only fill missing fields
+    if (!target.pron && r.pron) target.pron = r.pron;
+    if (!target.roman && r.roman) target.roman = r.roman;
+    if (!target.decomp && r.decomp) target.decomp = r.decomp;
+    if (!target.analysis && r.analysis) target.analysis = r.analysis;
+    if ((target.tags || []).length === 0 && r.tags && Array.isArray(r.tags)) {
+      target.tags = r.tags.slice(0, 5);
+    }
+    target.updatedAt = Date.now();
+    updated++;
+  }
+  return updated;
+}
+
+async function runAICompletion() {
+  const incomplete = findIncompleteEntries();
+  if (incomplete.length === 0) {
+    toast('无需补全', 'info');
+    return;
+  }
+
+  // Switch to progress view
+  document.getElementById('ai-scan-panel').classList.add('hidden');
+  document.getElementById('ai-progress-panel').classList.remove('hidden');
+  document.getElementById('ai-close-btn').classList.add('hidden');
+  document.getElementById('ai-cancel-btn').classList.remove('hidden');
+  document.getElementById('ai-log').innerHTML = '';
+
+  aiState.running = true;
+  aiState.cancelRequested = false;
+
+  const batchSize = 5;
+  const total = incomplete.length;
+  let done = 0;
+  let totalUpdated = 0;
+
+  aiLog(`开始补全 ${total} 条词条，分 ${Math.ceil(total / batchSize)} 批`, 'info');
+  updateAIProgress(0, total, '初始化...');
+
+  for (let i = 0; i < total; i += batchSize) {
+    if (aiState.cancelRequested) {
+      aiLog('用户已取消', 'error');
+      break;
+    }
+    const batch = incomplete.slice(i, i + batchSize);
+    const batchLabel = batch.map(e => e.hangul).join(', ');
+    aiLog(`第 ${Math.floor(i / batchSize) + 1} 批：${batchLabel}`, 'info');
+    updateAIProgress(i, total, batch[0]?.hangul);
+
+    try {
+      const prompt = buildCompletionPrompt(batch);
+      const resp = await callLLM(llmSettings, prompt, 4096);
+      const parsed = extractJSON(resp);
+      const updated = applyCompletions(batch, parsed);
+      totalUpdated += updated;
+      aiLog(`✓ 完成 ${updated}/${batch.length} 条`, 'success');
+      save();
+      render();
+    } catch(e) {
+      aiLog(`✗ 失败：${e.message}`, 'error');
+      // Continue to next batch
+    }
+
+    // Small delay between batches to avoid rate limits
+    if (i + batchSize < total && !aiState.cancelRequested) {
+      await new Promise(r => setTimeout(r, 800));
+    }
+    done = Math.min(i + batchSize, total);
+    updateAIProgress(done, total, '');
+  }
+
+  updateAIProgress(total, total, '完成');
+  aiState.running = false;
+  document.getElementById('ai-cancel-btn').classList.add('hidden');
+  document.getElementById('ai-close-btn').classList.remove('hidden');
+  document.getElementById('ai-current').textContent = `✓ 完成 · 共补全 ${totalUpdated} 条词条`;
+  aiLog(`全部完成！共补全 ${totalUpdated} 条词条`, 'success');
+  toast(`AI 补全完成：${totalUpdated} 条`, 'success');
+}
+
+// =========================================================================
+// TOAST
+// =========================================================================
+function toast(msg, type = 'info') {
+  const colors = {
+    success: 'bg-[#34d399]/20 border-[#34d399]/40 text-[#6ee7b7]',
+    error:   'bg-[#f43f5e]/20 border-[#f43f5e]/40 text-[#fda4af]',
+    info:    'bg-[#38bdf8]/20 border-[#38bdf8]/40 text-[#7dd3fc]',
+  };
+  const el = document.createElement('div');
+  el.className = `toast glass px-4 py-2 rounded-lg border text-sm ${colors[type]}`;
+  el.textContent = msg;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(() => {
+    el.style.transition = 'all 0.3s';
+    el.style.opacity = '0';
+    el.style.transform = 'translateX(100%)';
+    setTimeout(() => el.remove(), 300);
+  }, 2400);
+}
+
+// =========================================================================
+// KEYBOARD SHORTCUTS
+// =========================================================================
+document.addEventListener('keydown', (e) => {
+  // Ignore when typing in input/textarea
+  const tag = (e.target.tagName || '').toLowerCase();
+  const inField = tag === 'input' || tag === 'textarea';
+  const modalOpen = !document.getElementById('add-modal').classList.contains('hidden')
+                 || !document.getElementById('paste-modal').classList.contains('hidden');
+
+  if (e.key === 'Escape') {
+    if (modalOpen) {
+      closeAddModal();
+      closePasteModal();
+    } else if (document.activeElement === document.getElementById('search-input')) {
+      clearSearch();
+      document.getElementById('search-input').blur();
+    }
+    return;
+  }
+
+  if (inField) return;
+
+  if (e.key === '/') {
+    e.preventDefault();
+    document.getElementById('search-input').focus();
+    return;
+  }
+  if (e.key === 'n' || e.key === 'N') {
+    e.preventDefault();
+    openAddModal();
+    return;
+  }
+  if (e.key === 'p' || e.key === 'P') {
+    e.preventDefault();
+    openPasteModal();
+    return;
+  }
+  // 1-9: jump to first 9 initials
+  if (/^[1-9]$/.test(e.key) && !modalOpen) {
+    const idx = parseInt(e.key) - 1;
+    if (idx < INITIALS.length) selectInitial(idx);
+    return;
+  }
+});
+
+// =========================================================================
+// SEED EXAMPLE (only on first run) — demonstrate with user's 찌 example
+// =========================================================================
+function maybeSeedExample() {
+  if (state.entries.length > 0) return;  // user already has data
+  const now = Date.now();
+  const seed = [
+    {
+      id: uid(), hangul:'찌다', roman:'jji-da', root:'찌', pron:'[찌다]',
+      meaning:'蒸（食物）、天气闷热',
+      decomp:'ㅉ(强紧捏聚集)+ㅣ(垂直尖锐)+다(动作化)',
+      analysis:'强力紧捏的气流垂直向前穿透并定着，使事物在密闭中被热气渗透——既指食物蒸制，也指天气闷热难散。',
+      tags:['烹饪','气象'], notes:'示例词条 — 可随时编辑或删除',
+      createdAt: now, updatedAt: now,
+    },
+    {
+      id: uid(), hangul:'찌다', roman:'jji-da', root:'찌', pron:'[찌다]',
+      meaning:'长胖、长肉',
+      decomp:'ㅉ(强紧捏聚集)+ㅣ(垂直尖锐)+다(动作化)',
+      analysis:'同一音核的另一引申：身体被"蒸"般膨胀充实，比喻体重增加。',
+      tags:['身体变化'], notes:'与"蒸"同源，引申为体积膨胀',
+      createdAt: now+1, updatedAt: now+1,
+    },
+    {
+      id: uid(), hangul:'찌르다', roman:'jji-reu-da', root:'찌', pron:'[찌르다]',
+      meaning:'刺、扎、戳（极具物理破坏力的动作）',
+      decomp:'ㅉ(强紧捏聚集)+ㅣ(垂直尖锐)+르(顺滑流转)',
+      analysis:'强紧捏的气流以尖锐之姿顺滑穿透目标，是极具物理破坏力的穿刺动作。',
+      tags:['动作','破坏'], notes:'',
+      createdAt: now+2, updatedAt: now+2,
+    },
+    {
+      id: uid(), hangul:'찌', roman:'jji', root:'찌', pron:'[찌]',
+      meaning:'钓鱼用的浮标',
+      decomp:'ㅉ(强紧捏聚集)+ㅣ(垂直尖锐)',
+      analysis:'强紧捏聚集于尖锐一点的小型物体，浮于水面作为标记。',
+      tags:['器物','钓鱼'], notes:'',
+      createdAt: now+3, updatedAt: now+3,
+    },
+  ];
+  state.entries = seed;
+  save();
+}
+
+// =========================================================================
+// INIT
+// =========================================================================
+load();
+loadSettings();
+maybeSeedExample();
+renderReferencePanel();
+render();
+updateAIButton();
+
+// Welcome toast
+setTimeout(() => {
+  if (state.entries.length <= 4) {
+    toast('已载入 4 条示例（찌 系）— 点击 ㅉ 试试，或按 N 开始添加', 'info');
+  }
+}, 500);
+</script>
+
+</body>
+</html>
