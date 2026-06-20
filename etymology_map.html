@@ -417,7 +417,48 @@
 
       <div>
         <label class="text-xs text-slate-400 block mb-1">语义流转分析 Analysis</label>
-        <textarea id="add-analysis" rows="2" placeholder="强力紧捏的气流垂直向前穿透并定着于一点的动作..."
+        <textarea id="add-analysis" rows="3" placeholder="用造物主矩阵分析：辅音骨架 + 元音坐标 + 收音着陆 + 张力调节..."
+                  class="w-full rounded-lg px-3 py-2 text-sm"></textarea>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-xs text-slate-400 block mb-1">词类 Word Class</label>
+          <select id="add-wordclass" class="w-full rounded-lg px-3 py-2 text-sm bg-black/30">
+            <option value="">— 未指定 —</option>
+            <option value="固有韩语">固有韩语 고유어</option>
+            <option value="汉字词">汉字词 한자어</option>
+            <option value="外来语">外来语 외래어</option>
+            <option value="混合词">混合词 혼종어</option>
+            <option value="新造词">新造词/缩略语</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs text-slate-400 block mb-1">汉字 Hanja（若适用）</label>
+          <input id="add-hanja" type="text" placeholder="例如 愛 / 山 / 不安" class="w-full rounded-lg px-3 py-2 text-sm">
+        </div>
+      </div>
+
+      <div>
+        <label class="text-xs text-slate-400 block mb-1">词源追溯 Etymology（古韩语/中古汉语/外来源语 + 词根词缀）</label>
+        <textarea id="add-etymology" rows="3" placeholder="如：固有词动词 찌다，古义为「高温少量水煮熟并收汁」。学界对其词根与「찌」关联尚无定论。"
+                  class="w-full rounded-lg px-3 py-2 text-sm"></textarea>
+      </div>
+
+      <div>
+        <label class="text-xs text-slate-400 block mb-1">相关词 Related（空格分隔：同根/近义/反义）</label>
+        <input id="add-related" type="text" placeholder="例如 찌개 찌르다 삶다 (反)익히다" class="w-full rounded-lg px-3 py-2 text-sm">
+      </div>
+
+      <div>
+        <label class="text-xs text-slate-400 block mb-1">例句 Examples（每行一条，韩文 — 中文）</label>
+        <textarea id="add-examples" rows="2" placeholder="고기를 쪄서 먹었다. — 把肉蒸了吃。&#10;오늘 날씨가 정말 찐다. — 今天天气真闷。"
+                  class="w-full rounded-lg px-3 py-2 text-sm"></textarea>
+      </div>
+
+      <div>
+        <label class="text-xs text-slate-400 block mb-1">历史文化背景 Cultural Note</label>
+        <textarea id="add-cultural" rows="2" placeholder="涉及的历史时期、制度、宗教、文化语境..."
                   class="w-full rounded-lg px-3 py-2 text-sm"></textarea>
       </div>
 
@@ -1738,6 +1779,8 @@ function renderDetail() {
           </div>
           <div class="flex items-center gap-2 mt-2 text-xs text-slate-500 flex-wrap">
             <span>词根 <span class="text-[#f43f5e] font-bold">${escapeHtml(e.root || getDefaultRoot(e.hangul))}</span></span>
+            ${e.wordClass ? `<span class="inline-block px-2 py-0.5 rounded-full bg-[#a855f7]/15 text-[#d8b4fe] border border-[#a855f7]/30">${escapeHtml(e.wordClass)}</span>` : ''}
+            ${e.hanja ? `<span class="inline-block px-2 py-0.5 rounded-full bg-[#38bdf8]/15 text-[#7dd3fc] border border-[#38bdf8]/30 font-serif">${escapeHtml(e.hanja)}</span>` : ''}
           </div>
         </div>
         <div class="flex gap-1 shrink-0">
@@ -1775,11 +1818,62 @@ function renderDetail() {
         </div>
       ` : ''}
 
-      <!-- Analysis -->
+      <!-- Analysis (造物主矩阵) -->
       ${e.analysis ? `
         <div class="mb-4">
-          <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">语义流转分析 Analysis</div>
-          <div class="text-sm text-slate-200 leading-relaxed bg-white/[0.03] px-3 py-2 rounded-lg border border-white/5">${escapeHtml(e.analysis)}</div>
+          <div class="text-xs text-[#d8b4fe] uppercase tracking-wider mb-1">🎯 造物主矩阵分析 Analysis</div>
+          <div class="text-sm text-slate-100 leading-relaxed bg-gradient-to-br from-[#a855f7]/10 to-[#ec4899]/5 px-3 py-2 rounded-lg border border-[#a855f7]/20 whitespace-pre-wrap">${escapeHtml(e.analysis)}</div>
+        </div>
+      ` : ''}
+
+      <!-- Etymology 词源 -->
+      ${e.etymology ? `
+        <div class="mb-4">
+          <div class="text-xs text-[#fbbf24] uppercase tracking-wider mb-1">📜 词源追溯 Etymology</div>
+          <div class="text-sm text-slate-200 leading-relaxed bg-[#fbbf24]/[0.04] px-3 py-2 rounded-lg border border-[#fbbf24]/15 whitespace-pre-wrap">${escapeHtml(e.etymology)}</div>
+        </div>
+      ` : ''}
+
+      <!-- Examples 例句 -->
+      ${(e.examples || []).length > 0 ? `
+        <div class="mb-4">
+          <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">💬 例句 Examples</div>
+          <div class="space-y-1">
+            ${(e.examples || []).map(ex => {
+              const parts = ex.split(/\s*[—–\-]\s*/);
+              if (parts.length >= 2) {
+                return `<div class="text-sm pl-2 border-l-2 border-[#34d399]/40"><span class="text-slate-100">${escapeHtml(parts[0])}</span> <span class="text-slate-500">—</span> <span class="text-slate-400">${escapeHtml(parts.slice(1).join(' — '))}</span></div>`;
+              }
+              return `<div class="text-sm pl-2 border-l-2 border-[#34d399]/40 text-slate-100">${escapeHtml(ex)}</div>`;
+            }).join('')}
+          </div>
+        </div>
+      ` : ''}
+
+      <!-- Related 相关词 -->
+      ${(e.related || []).length > 0 ? `
+        <div class="mb-4">
+          <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">🔗 相关词 Related</div>
+          <div class="flex flex-wrap gap-1.5">
+            ${(e.related || []).map(t => {
+              const isAnti = t.startsWith('(反)');
+              const txt = isAnti ? t.slice(3).trim() : t;
+              const lookup = state.entries.find(x => x.hangul === txt);
+              const cls = isAnti
+                ? 'bg-[#f43f5e]/10 text-[#fda4af] border-[#f43f5e]/30 hover:bg-[#f43f5e]/20'
+                : (lookup ? 'bg-[#34d399]/10 text-[#6ee7b7] border-[#34d399]/30 hover:bg-[#34d399]/20 cursor-pointer' : 'bg-white/5 text-slate-300 border-white/10 hover:bg-white/10');
+              const clickAttr = lookup ? `onclick="jumpToHangul('${escapeHtml(txt).replace(/'/g,"\\'")}')"` : '';
+              return `<span ${clickAttr} class="inline-block text-xs px-2 py-0.5 rounded border transition ${cls}">${isAnti ? '反 ' : ''}${escapeHtml(txt)}</span>`;
+            }).join('')}
+          </div>
+        </div>
+      ` : ''}
+
+      <!-- Cultural Note 历史文化背景 -->
+      ${e.culturalNote ? `
+        <div class="mb-4">
+          <div class="text-xs text-[#7dd3fc] uppercase tracking-wider mb-1">🏛 历史文化背景</div>
+          <div class="text-sm text-slate-200 leading-relaxed bg-[#38bdf8]/[0.04] px-3 py-2 rounded-lg border border-[#38bdf8]/15 whitespace-pre-wrap">${escapeHtml(e.culturalNote)}</div>
         </div>
       ` : ''}
 
@@ -1927,6 +2021,12 @@ function openAddModal(entry = null) {
   document.getElementById('add-meaning').value = entry?.meaning || '';
   document.getElementById('add-decomp').value = entry?.decomp || '';
   document.getElementById('add-analysis').value = entry?.analysis || '';
+  document.getElementById('add-wordclass').value = entry?.wordClass || '';
+  document.getElementById('add-hanja').value = entry?.hanja || '';
+  document.getElementById('add-etymology').value = entry?.etymology || '';
+  document.getElementById('add-related').value = (entry?.related || []).join(' ');
+  document.getElementById('add-examples').value = (entry?.examples || []).join('\n');
+  document.getElementById('add-cultural').value = entry?.culturalNote || '';
   document.getElementById('add-tags').value = (entry?.tags || []).join(' ');
   document.getElementById('add-notes').value = entry?.notes || '';
 
@@ -1964,6 +2064,12 @@ function saveEntry() {
     meaning,
     decomp: document.getElementById('add-decomp').value.trim(),
     analysis: document.getElementById('add-analysis').value.trim(),
+    wordClass: document.getElementById('add-wordclass').value.trim(),
+    hanja: document.getElementById('add-hanja').value.trim(),
+    etymology: document.getElementById('add-etymology').value.trim(),
+    related: document.getElementById('add-related').value.trim().split(/\s+/).filter(Boolean),
+    examples: document.getElementById('add-examples').value.split('\n').map(s => s.trim()).filter(Boolean),
+    culturalNote: document.getElementById('add-cultural').value.trim(),
     tags: document.getElementById('add-tags').value.trim().split(/\s+/).filter(Boolean),
     notes: document.getElementById('add-notes').value.trim(),
   };
@@ -2079,36 +2185,101 @@ function buildAIEntryPrompt(input, existingTags) {
   const tagHint = existingTags.length > 0
     ? `\n【现有标签参考（尽量复用，最多挑 1-3 个；如确实没有合适的可新建）】\n${existingTags.slice(0, 80).join('、')}\n`
     : '';
-  return `你是一名韩语词汇学专家，正在为韩语音韵词典补全词条。
+  return `你是韩语研究者和优秀教学者，是语音语言学、谚文字形、字音字义、词源、词根词缀、汉字词、固有韩语、外来语、历史制度文化方面的专家，并且擅长教学总结、抽象解释、具体举例和结构化展开。
+
+【读者设定】
+读者是韩语小白。所有韩文字符必须注音（方括号 [] 内写实际发音），所有汉字词必须给出汉字。
 
 【任务】
-用户输入可能是<span style="color:#7dd3fc">韩文</span>或<span style="color:#fbbf24">中文</span>。请分析并补全一个韩语词典词条的所有字段。
-- 若输入是中文：翻译为最贴切的韩文词作为 hangul（优先用固有词/汉字词/常用词，避免生僻译法）。
+用户输入可能是韩文或中文。请深入分析并补全一个韩语词典词条。
+- 若输入是中文：翻译为最贴切的韩文词作为 hangul（优先固有词/汉字词/常用词，避免生僻译法）。
 - 若输入是韩文：直接使用。
+- 输出**严格 JSON**，不要 markdown 围栏、不要前后多余文字。
+
+【词类判定 wordClass】（必填，五选一）
+1. 固有韩语 고유어
+2. 汉字词 한자어
+3. 外来语 외래어
+4. 混合词 혼종어
+5. 新造词/缩略语
 
 【字段说明】
-- hangul: 韩文词条（不含空格；若为动词/形容词可用词干形式或字典形，以词典常用为准）
-- roman: 文化观光部 2000 式拉丁化 (Revised Romanization)，逐音节转写。如 찌다 → "jjida"，사랑 → "sarang"
-- pron: 实际发音（用方括号包围），如 [찌다]、[사랑]、[안녕히]
-- meaning: 中文释义；多义项用「；」分隔，每项简练（不超过 15 字）
-- decomp: 音素分拆，格式 "ㅈ+ㅣ+ㄷㅏ" 或 "ㅅ+ㅏ+ㄹ+ㅏㅇ"，把每个音节的初/中/终声拆开，多音节用空格连接
-- analysis: 一句话音韵/语义流转分析，不超过 40 字。如 "舌音 ㄹ 流动 + 喉音 ㅎ 气息 → 离开"
-- root: 词根（默认 hangul 的第一个音节），如 "찌다" → "찌"
-- tags: 1-3 个标签，描述语义/语法类别（动作/状态/物体/自然/身体/情感/抽象…）
+- hangul: 韩文词条
+- roman: 文化观光部 2000 式拉丁化 (Revised Romanization)，如 찌다→"jjida"，사랑→"sarang"
+- pron: 实际发音，方括号包围，如 [찌다]、[사랑]、[안녕히]
+- meaning: 中文释义；多义项用「；」分隔，每项不超 15 字
+- wordClass: 上述五类之一
+- hanja: 若为汉字词，给出对应汉字（如 사랑→"愛"、산→"山"、불안→"不安"）；否则空字符串 ""
+- root: 词根（默认 hangul 第一个音节）
+- decomp: 音素分拆，如 "ㅉ+ㅣ+ㄷㅏ"（每音节的初/中/终声拆开，多音节用空格连接）
+- analysis: **重点**。基于「造物主矩阵」的音韵物理分析 100-200 字。
+    * 若 wordClass=固有韩语：必须用矩阵拆解"为什么这样发音"——依次说明辅音骨架（19 初声）、元音坐标（21 中声）、收音着陆（27 终声）、张力调节（平/紧/送气）、可能的元音交替（Ablaut）。
+    * 若 wordClass=汉字词：不要硬套矩阵。简述汉字音进入韩语后的音变规则即可。
+    * 若 wordClass=外来语：不要硬套矩阵。说明源语发音 + 韩语音系适配规则。
+- etymology: **重点**。词源追溯 150-300 字。
+    * 固有韩语：尽量追溯到古代韩语 (Old Korean) / 中世韩语 (Middle Korean) 或可考历史形式；不确定就明确写"学界没有定论"。分析词根/词缀/语音演变。**重点解释为什么这个词根如此发音**。
+    * 汉字词：拆解每个汉字的语义功能 + 中古汉语/古汉语来源 + 与现代汉语/日语汉字词的异同。
+    * 外来语：说明来源语言（英/日/中/葡…）+ 进入韩语后的音变 + 意义变化 + 使用场景。
+    * 若涉及中国古代制度、佛教、儒学、科举、官僚制度、近代日本造词、现代英语翻译词，请在 etymology 或 culturalNote 里指出。
+- related: 4-8 个相关词数组（同根词、近义词、反义词、常见搭配、派生词、固定表达、成语、俗语）。反义词请加 "(反)" 前缀。
+- examples: 2-3 个典型例句字符串数组。每条格式 "韩文 — 中文翻译"，韩文部分给读者展示典型语法/敬语/搭配。
+- culturalNote: 历史/制度/文化背景，可涉及三国/新罗/高丽/朝鲜王朝/日据/现代；佛教/儒学/科举/去汉字化/谚文化/K-pop 等。无则空字符串 ""。
+- tags: 1-3 个标签，描述语义/语法类别。
 ${tagHint}
+【造物主矩阵参考框架】
+
+A. 初声（19 种 · 辅音骨架 · 物理动作）：
+   - 舌根 ㄱ/ㄲ/ㅋ：边缘、外壳、角度 / 极度坚硬壳、向内压缩 / 剧烈扩张、爆裂
+   - 舌尖 ㄴ/ㄷ/ㄸ/ㅌ/ㄹ：柔软连接、向下延伸 / 坚硬实体、平稳接触 / 物理碾压、大地坚实 / 猛烈弹开、突破 / 流动、滚动、循环、滑动
+   - 双唇 ㅁ/ㅂ/ㅃ/ㅍ：内部容器、聚集、水状物 / 平面接触、阻挡墙 / 强力挤压、吸附粘连 / 彻底破裂、向外爆开、扩散
+   - 齿音 ㅅ/ㅆ/ㅈ/ㅉ/ㅊ：缝隙、细长、摩擦 / 极度尖锐、撕裂 / 捏住、集中于一点 / 死死咬住、榨取 / 强力刺穿、向上突进
+   - 喉腔 ㅇ/ㅎ：虚空、中空、圆满 / 气流散发、广袤、叹息
+
+B. 中声（21 种 · 元音坐标 · 空间/质量维度）：
+   - 基础六向：ㅏ 向外明亮 / ㅓ 向内暗沉 / ㅗ 向上轻小 / ㅜ 向下沉重 / ㅣ 垂直存在 / ㅡ 水平基底
+   - 阳性 (ㅏ ㅑ ㅗ ㅛ ㅐ ㅒ ㅘ ㅙ ㅚ)：轻、快、明、外显
+   - 阴性 (ㅓ ㅕ ㅜ ㅠ ㅔ ㅖ ㅝ ㅞ ㅟ ㅢ)：重、慢、暗、内敛
+   - 复合方向融合：ㅘ=向上+向外极度扩张；ㅝ=向下+向内卷入漩涡；ㅚ=向上汇聚顶部一点；ㅟ=向下深处垂直存在
+
+C. 终声（27 种 · 收音 · 物理着陆状态）：
+   - ㄱ 突然闭锁 / ㄴ 沉淀附着 / ㄷ 强硬阻断 / ㄹ 动能悬浮滚动 / ㅁ 彻底封装实体化 / ㅂ 表面拍打 / ㅅ 摩擦停止 / ㅇ 中空共振回音 / ㅎ 气流消散
+   - 双收音：ㄳ 闭锁+摩擦 / ㄵ 沉淀+捏住(앉다) / ㄶ 堆积+气散(많다) / ㄺ 滑行+卡死(읽다) / ㄻ 流动+封装(삶) / ㄼ 滑行+压平(넓다) / ㄾ 滑过+弹开(핥다) / ㄿ 流转+破出(읊다) / ㅀ 滑动+气泄(잃다) / ㅄ 压扁+摩擦剥离(없다)
+
+D. 张力调节（同根不换义，调"力度"）：
+   - 平音 (ㅂ ㄷ ㄱ ㅈ ㅅ)：自然流露
+   - 紧音 (ㅃ ㄸ ㄲ ㅉ ㅆ)：压缩吃力、死死咬住、拧干、榨取
+   - 送气音 (ㅍ ㅌ ㅋ ㅊ ㅎ)：爆破猛烈、扩散、带风
+   - 例：자르다 切(平) / 짜다 挤压(紧) / 차다 踢开(送气)
+
+E. 元音交替 Ablaut（同辅音骨架换元音 = 换大小/明暗/轻重）：
+   - 졸졸 溪水潺潺 (ㅗ 细小浅快) vs 줄줄 大水哗哗 (ㅜ 沉重倾泻)
+   - 파랗다 明亮蓝 (ㅏ) vs 퍼렇다 深暗蓝 (ㅓ)
+   - 발자국 浅脚印 (ㅏ) vs 벌자국 重深坑 (ㅓ)
+
+【分析原则】
+1. 必须先用矩阵判断 wordClass；汉字词/外来语不要硬套矩阵。
+2. 词源不确定时**必须**明确写"学界没有定论"或"不确定"，禁止编造。
+3. 输出 JSON 严格符合下方结构。
+4. 所有韩文/汉字必须给读者注音和释义。
+
 【输入】
 ${input}
 
-【输出】
-严格输出下面的 JSON，不要任何前后多余文字、不要 markdown 围栏：
+【输出 JSON 模板】
 {
   "hangul": "",
   "roman": "",
   "pron": "",
   "meaning": "",
+  "wordClass": "",
+  "hanja": "",
+  "root": "",
   "decomp": "",
   "analysis": "",
-  "root": "",
+  "etymology": "",
+  "related": [],
+  "examples": [],
+  "culturalNote": "",
   "tags": []
 }`;
 }
@@ -2135,22 +2306,31 @@ async function runAINewEntry() {
   try {
     const existingTags = getAllTags();
     const prompt = buildAIEntryPrompt(input, existingTags);
-    const resp = await callLLM(llmSettings, prompt, 1024);
+    const resp = await callLLM(llmSettings, prompt, 4096);
     const parsed = extractJSON(resp);
     // 基本校验
     if (!parsed.hangul || !parsed.meaning) {
       throw new Error('AI 返回缺少 hangul 或 meaning 字段');
     }
     // 补默认值 + 客户端兜底
+    const h = String(parsed.hangul).trim();
+    const validClasses = ['固有韩语','汉字词','外来语','混合词','新造词'];
+    const wcRaw = String(parsed.wordClass || '').trim();
     const entry = {
-      hangul: String(parsed.hangul).trim(),
-      roman:  String(parsed.roman || '').trim() || romanizeHangul(String(parsed.hangul).trim()),
-      pron:   String(parsed.pron || '').trim(),
-      meaning:String(parsed.meaning).trim(),
-      decomp: String(parsed.decomp || '').trim(),
-      analysis: String(parsed.analysis || '').trim(),
-      root:   String(parsed.root || '').trim() || getDefaultRoot(String(parsed.hangul).trim()),
-      tags:   Array.isArray(parsed.tags) ? parsed.tags.map(t => String(t).trim()).filter(Boolean).slice(0, 5) : [],
+      hangul:    h,
+      roman:     String(parsed.roman || '').trim() || romanizeHangul(h),
+      pron:      String(parsed.pron || '').trim(),
+      meaning:   String(parsed.meaning).trim(),
+      wordClass: validClasses.includes(wcRaw) ? wcRaw : '',
+      hanja:     String(parsed.hanja || '').trim(),
+      root:      String(parsed.root || '').trim() || getDefaultRoot(h),
+      decomp:    String(parsed.decomp || '').trim(),
+      analysis:  String(parsed.analysis || '').trim(),
+      etymology: String(parsed.etymology || '').trim(),
+      related:   Array.isArray(parsed.related) ? parsed.related.map(t => String(t).trim()).filter(Boolean).slice(0, 12) : [],
+      examples:  Array.isArray(parsed.examples) ? parsed.examples.map(t => String(t).trim()).filter(Boolean).slice(0, 5) : [],
+      culturalNote: String(parsed.culturalNote || '').trim(),
+      tags:      Array.isArray(parsed.tags) ? parsed.tags.map(t => String(t).trim()).filter(Boolean).slice(0, 5) : [],
     };
     _aiAddLastEntry = entry;
     _setStatus('✓ AI 分析完成，请确认后应用', 'success');
@@ -2171,10 +2351,43 @@ function renderAIEntryPreview(entry) {
     ? `<div class="text-xs text-[#fbbf24] mb-2 px-3 py-2 bg-[#fbbf24]/10 border border-[#fbbf24]/30 rounded-lg">⚠ 词典中已存在「${escapeHtml(entry.hangul)}」${dup.meaning ? '（' + escapeHtml(dup.meaning.split(/[;；]/)[0]) + '）' : ''}。仍可继续创建（会重复）。</div>`
     : '';
 
-  const field = (label, val, color = '#cbd5e1') => val
+  // 字段渲染助手
+  const longField = (label, val, color = '#cbd5e1') => val
+    ? `<div class="py-1.5"><div class="text-[10px] text-slate-500 uppercase tracking-wider mb-0.5">${label}</div><div style="color:${color}" class="text-sm break-words leading-relaxed whitespace-pre-wrap">${escapeHtml(val)}</div></div>`
+    : '';
+  const shortField = (label, val, color = '#cbd5e1') => val
     ? `<div class="flex items-baseline gap-2 py-1"><span class="text-[10px] text-slate-500 min-w-[60px] uppercase tracking-wider">${label}</span><span style="color:${color}" class="text-sm break-all">${escapeHtml(val)}</span></div>`
     : '';
 
+  // 词类徽章
+  const wcBadge = entry.wordClass
+    ? `<span class="inline-block text-[11px] px-2 py-0.5 rounded-full bg-[#a855f7]/15 text-[#d8b4fe] border border-[#a855f7]/30">${escapeHtml(entry.wordClass)}</span>`
+    : '';
+  const hanjaBadge = entry.hanja
+    ? `<span class="inline-block text-sm px-2 py-0.5 rounded-full bg-[#38bdf8]/15 text-[#7dd3fc] border border-[#38bdf8]/30 font-serif">${escapeHtml(entry.hanja)}</span>`
+    : '';
+
+  // 相关词云
+  const relatedHtml = entry.related && entry.related.length > 0
+    ? entry.related.map(t => {
+        const isAnti = t.startsWith('(反)');
+        const txt = isAnti ? t.slice(3).trim() : t;
+        return `<span class="inline-block text-[11px] px-2 py-0.5 rounded ${isAnti ? 'bg-[#f43f5e]/15 text-[#fda4af] border border-[#f43f5e]/30' : 'bg-white/5 text-slate-300 border border-white/10'}">${isAnti ? '反 ' : ''}${escapeHtml(txt)}</span>`;
+      }).join(' ')
+    : '';
+
+  // 例句列表
+  const examplesHtml = entry.examples && entry.examples.length > 0
+    ? entry.examples.map(ex => {
+        const parts = ex.split(/\s*[—–\-]\s*/);
+        if (parts.length >= 2) {
+          return `<div class="text-xs py-1 border-l-2 border-[#34d399]/40 pl-2"><span class="text-slate-200">${escapeHtml(parts[0])}</span> <span class="text-slate-500">—</span> <span class="text-slate-400">${escapeHtml(parts.slice(1).join(' — '))}</span></div>`;
+        }
+        return `<div class="text-xs py-1 border-l-2 border-[#34d399]/40 pl-2 text-slate-200">${escapeHtml(ex)}</div>`;
+      }).join('')
+    : '';
+
+  // 标签
   const tagsHtml = entry.tags.length > 0
     ? entry.tags.map(t => `<span class="inline-block text-[10px] px-2 py-0.5 rounded-full bg-[#34d399]/15 text-[#6ee7b7] border border-[#34d399]/30">${escapeHtml(t)}</span>`).join(' ')
     : `<span class="text-xs text-slate-600 italic">无</span>`;
@@ -2182,15 +2395,62 @@ function renderAIEntryPreview(entry) {
   document.getElementById('ai-add-preview').innerHTML = `
     ${dupWarning}
     <div class="bg-white/[0.03] border border-white/10 rounded-xl p-4 fade-in">
-      <div class="flex items-baseline gap-2 mb-3 flex-wrap">
+      <!-- 词头 -->
+      <div class="flex items-baseline gap-2 mb-2 flex-wrap">
         <span class="text-3xl font-bold text-white">${escapeHtml(entry.hangul)}</span>
         ${entry.roman ? `<span class="text-xs text-slate-500 font-mono">/${escapeHtml(entry.roman)}/</span>` : ''}
         ${entry.pron ? `<span class="text-xs text-[#fbbf24] font-mono">${escapeHtml(entry.pron)}</span>` : ''}
       </div>
-      ${field('释义', entry.meaning, '#fde68a')}
-      ${field('音素分拆', entry.decomp, '#7dd3fc')}
-      ${field('分析', entry.analysis)}
-      ${field('词根', entry.root, '#a78bfa')}
+      <div class="flex items-center gap-1.5 mb-3 flex-wrap">
+        ${wcBadge}${hanjaBadge}
+        ${entry.root ? `<span class="text-[10px] text-slate-500">词根 <span class="text-[#a78bfa] font-bold">${escapeHtml(entry.root)}</span></span>` : ''}
+      </div>
+
+      <!-- 释义 -->
+      ${shortField('释义', entry.meaning, '#fde68a')}
+      ${shortField('音素分拆', entry.decomp, '#7dd3fc')}
+
+      <!-- 矩阵分析（重点） -->
+      ${entry.analysis ? `
+        <div class="my-3 p-3 rounded-lg bg-gradient-to-br from-[#a855f7]/10 to-[#ec4899]/5 border border-[#a855f7]/20">
+          <div class="text-[10px] text-[#d8b4fe] uppercase tracking-wider mb-1">🎯 造物主矩阵分析</div>
+          <div class="text-sm text-slate-100 leading-relaxed whitespace-pre-wrap">${escapeHtml(entry.analysis)}</div>
+        </div>
+      ` : ''}
+
+      <!-- 词源 -->
+      ${entry.etymology ? `
+        <div class="my-3 p-3 rounded-lg bg-[#fbbf24]/[0.06] border border-[#fbbf24]/20">
+          <div class="text-[10px] text-[#fbbf24] uppercase tracking-wider mb-1">📜 词源追溯</div>
+          <div class="text-sm text-slate-200 leading-relaxed whitespace-pre-wrap">${escapeHtml(entry.etymology)}</div>
+        </div>
+      ` : ''}
+
+      <!-- 例句 -->
+      ${examplesHtml ? `
+        <div class="my-2">
+          <div class="text-[10px] text-slate-500 uppercase tracking-wider mb-1">💬 例句</div>
+          <div class="space-y-0.5">${examplesHtml}</div>
+        </div>
+      ` : ''}
+
+      <!-- 相关词 -->
+      ${relatedHtml ? `
+        <div class="my-2">
+          <div class="text-[10px] text-slate-500 uppercase tracking-wider mb-1">🔗 相关词</div>
+          <div class="flex flex-wrap gap-1">${relatedHtml}</div>
+        </div>
+      ` : ''}
+
+      <!-- 文化背景 -->
+      ${entry.culturalNote ? `
+        <div class="my-3 p-3 rounded-lg bg-[#38bdf8]/[0.05] border border-[#38bdf8]/20">
+          <div class="text-[10px] text-[#7dd3fc] uppercase tracking-wider mb-1">🏛 历史文化背景</div>
+          <div class="text-sm text-slate-200 leading-relaxed whitespace-pre-wrap">${escapeHtml(entry.culturalNote)}</div>
+        </div>
+      ` : ''}
+
+      <!-- 标签 -->
       <div class="flex items-baseline gap-2 py-1">
         <span class="text-[10px] text-slate-500 min-w-[60px] uppercase tracking-wider">标签</span>
         <span class="flex flex-wrap gap-1">${tagsHtml}</span>
@@ -2208,16 +2468,21 @@ function renderAIEntryPreview(entry) {
 function applyAIEntry() {
   if (!_aiAddLastEntry) return;
   const e = _aiAddLastEntry;
-  // 检查重复（仅警告，不阻断）
   const data = {
     id: uid(),
     hangul: e.hangul,
     roman: e.roman,
     pron: e.pron,
     meaning: e.meaning,
+    wordClass: e.wordClass || '',
+    hanja: e.hanja || '',
+    root: e.root,
     decomp: e.decomp,
     analysis: e.analysis,
-    root: e.root,
+    etymology: e.etymology || '',
+    related: e.related || [],
+    examples: e.examples || [],
+    culturalNote: e.culturalNote || '',
     tags: e.tags,
     notes: '',
     createdAt: Date.now(),
@@ -2240,7 +2505,6 @@ function applyAIEntry() {
 function sendAIEntryToEditor() {
   if (!_aiAddLastEntry) return;
   const e = _aiAddLastEntry;
-  // 直接调用现有 add-modal，预填字段
   openAddModal();
   document.getElementById('add-hangul').value = e.hangul;
   document.getElementById('add-roman').value = e.roman;
@@ -2249,6 +2513,12 @@ function sendAIEntryToEditor() {
   document.getElementById('add-meaning').value = e.meaning;
   document.getElementById('add-decomp').value = e.decomp;
   document.getElementById('add-analysis').value = e.analysis;
+  document.getElementById('add-wordclass').value = e.wordClass || '';
+  document.getElementById('add-hanja').value = e.hanja || '';
+  document.getElementById('add-etymology').value = e.etymology || '';
+  document.getElementById('add-related').value = (e.related || []).join(' ');
+  document.getElementById('add-examples').value = (e.examples || []).join('\n');
+  document.getElementById('add-cultural').value = e.culturalNote || '';
   document.getElementById('add-tags').value = (e.tags || []).join(' ');
   document.getElementById('add-notes').value = '';
   closeAIAddModal();
@@ -2667,6 +2937,24 @@ function jumpFromTagBrowserToEntry(id) {
     const dp = document.getElementById('detail-panel');
     if (dp) dp.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }, 100);
+}
+
+// 在详情卡片中点相关词 → 跳到该 hangul 对应词条（若存在）
+function jumpToHangul(hangul) {
+  const e = state.entries.find(x => x.hangul === hangul);
+  if (!e) return;
+  const initIdx = getInitialIdx(e.hangul);
+  if (initIdx !== null) {
+    state.filter.initialIdx = initIdx;
+    state.filter.vowel = null;
+    state.filter.root = e.root || getDefaultRoot(e.hangul);
+    state.selectedEntryId = e.id;
+  }
+  render();
+  setTimeout(() => {
+    const dp = document.getElementById('detail-panel');
+    if (dp) dp.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, 50);
 }
 
 function addNewTag() {
