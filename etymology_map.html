@@ -512,6 +512,7 @@
       <div><kbd>/</kbd> 聚焦搜索</div>
       <div><kbd>N</kbd> 新建词条</div>
       <div><kbd>P</kbd> 批量粘贴</div>
+      <div><kbd>H</kbd> 折叠/展开导航栏</div>
       <div><kbd>Esc</kbd> 关闭弹窗</div>
       <div><kbd>1</kbd>~<kbd>9</kbd> 切换初声</div>
     </div>
@@ -2144,6 +2145,11 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'p' || e.key === 'P') {
     e.preventDefault();
     openPasteModal();
+    return;
+  }
+  if (e.key === 'h' || e.key === 'H') {
+    e.preventDefault();
+    toggleHeaderCompact();
     return;
   }
   // 1-9: jump to first 9 initials
