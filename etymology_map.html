@@ -998,7 +998,7 @@ function resolveTag(tagId) {
   return tagId;  // 未注册的标签，原样返回
 }
 
-// 取该标签（含 alias）下的所有词条
+// 取该标签（含 alias）下的所有直接词条（不含子代）
 function getTagWords(tagId) {
   const canonical = resolveTag(tagId);
   if (!canonical) return [];
@@ -1007,6 +1007,41 @@ function getTagWords(tagId) {
   if (node) (node.aliases || []).forEach(a => variants.add(a));
   return state.entries.filter(e =>
     (e.tags || []).some(t => variants.has(t))
+  );
+}
+
+// 取该标签 + 所有后代标签（递归子树）
+function getTagSubtree(tagId) {
+  const canonical = resolveTag(tagId);
+  if (!canonical) return [];
+  const result = new Set([canonical]);
+  const node = state.tagGraph[canonical];
+  if (node) (node.aliases || []).forEach(a => result.add(a));
+  // 递归收集子代
+  const stack = [canonical];
+  const visited = new Set([canonical]);
+  while (stack.length > 0) {
+    const cur = stack.pop();
+    getAllTags().forEach(t => {
+      if (visited.has(t)) return;
+      const tn = state.tagGraph[t];
+      if (tn && tn.parent && resolveTag(tn.parent) === cur) {
+        visited.add(t);
+        result.add(t);
+        const aliasNode = state.tagGraph[t];
+        if (aliasNode) (aliasNode.aliases || []).forEach(a => result.add(a));
+        stack.push(t);
+      }
+    });
+  }
+  return [...result];
+}
+
+// 取该标签（含所有后代）下的全部词条——用于累计计数
+function getTagWordsCumulative(tagId) {
+  const all = new Set(getTagSubtree(tagId));
+  return state.entries.filter(e =>
+    (e.tags || []).some(t => all.has(t))
   );
 }
 
@@ -1055,8 +1090,13 @@ function getRootTags() {
   });
 }
 
-// 标签计数
+// 标签计数（累计：含所有后代下的词条数）
 function getTagCount(tagId) {
+  return getTagWordsCumulative(tagId).length;
+}
+
+// 直接挂在该标签下的词条数（不含子代）——用于详情面板的「直接词条」展示
+function getTagDirectCount(tagId) {
   return getTagWords(tagId).length;
 }
 
@@ -2085,10 +2125,13 @@ function renderTagCloud() {
   }
   cloud.innerHTML = html;
 
-  // 展开选中标签的迷你词条列表
+  // 展开选中标签的迷你词条列表（含子代累计）
   if (tagCloudState.selectedTag) {
     const tag = tagCloudState.selectedTag;
-    const words = getTagWords(tag);
+    const directWords = getTagWords(tag);
+    const allWords = getTagWordsCumulative(tag);
+    const directCount = directWords.length;
+    const totalCount = allWords.length;
     const chain = getTagChain(tag);
     const node = state.tagGraph[tag] || {};
     const parent = chain.length >= 2 ? chain[chain.length - 2] : null;
@@ -2101,7 +2144,7 @@ function renderTagCloud() {
         <div class="flex items-baseline justify-between mb-2 flex-wrap gap-2">
           <div class="text-xs text-slate-500 flex items-baseline gap-2 flex-wrap">
             <span class="text-slate-400">${chain.map((c, i) => `<span class="${i === chain.length-1 ? 'text-[#34d399] font-bold' : 'cursor-pointer hover:text-[#7dd3fc]'}" onclick="goToTag('${escapeHtml(c).replace(/'/g,"\\'")}', event)">${escapeHtml(c)}</span>${i < chain.length-1 ? ' › ' : ''}`).join('')}</span>
-            <span>· ${words.length} 词条</span>
+            <span>· 累计 ${totalCount} 词条${directCount < totalCount ? `（直接 ${directCount}）` : ''}</span>
           </div>
           <button onclick="openTagBrowser('${escapeHtml(tag).replace(/'/g,"\\")}')" class="text-xs text-[#34d399] hover:text-[#6ee7b7] transition">在全屏中查看 →</button>
         </div>
@@ -2114,13 +2157,16 @@ function renderTagCloud() {
           </div>
         ` : ''}
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-1.5">
-          ${words.map(e => {
-            const senses = (e.meaning || '').split(/[;；]/)[0];
+          ${allWords.map(e => {
+            const senses = (e.meaning || '').split(/[;　?？]/)[0];
+            // 标注本词条是直接挂当前 tag 还是从子代继承
+            const directHit = (e.tags || []).includes(tag);
             return `
               <div onclick="selectEntryAndScroll('${e.id}')" class="cursor-pointer px-2.5 py-1.5 rounded-lg bg-white/[0.03] hover:bg-white/[0.08] border border-white/5 hover:border-[#34d399]/30 transition">
                 <div class="flex items-baseline gap-1.5">
                   <span class="font-bold text-white text-base">${escapeHtml(e.hangul)}</span>
                   ${e.roman ? `<span class="text-[10px] text-slate-500 font-mono">/${escapeHtml(e.roman)}/</span>` : ''}
+                  ${!directHit ? `<span class="text-[9px] text-[#a78bfa] ml-auto" title="来自子标签">${escapeHtml((e.tags || []).find(t => getTagSubtree(tag).includes(t)) || '')}↗</span>` : ''}
                 </div>
                 <div class="text-xs text-slate-400 truncate">${escapeHtml(senses)}</div>
               </div>
@@ -2265,8 +2311,10 @@ function renderTagDetail() {
   const node = state.tagGraph[tag] || {};
   const aliases = node.aliases || [];
   const related = node.related || [];
-  const words = getTagWords(tag);
-
+  const directWords = getTagWords(tag);
+  const allWords = getTagWordsCumulative(tag);
+  const directCount = directWords.length;
+  const totalCount = allWords.length;
   const pillBtn = (t, color) => `
     <button onclick="selectTagInBrowser('${escapeHtml(t).replace(/'/g,"\\'")}')" class="px-2 py-0.5 rounded text-xs border transition hover:bg-white/10" style="color:${color};border-color:${color}40;background:${color}14">
       ${escapeHtml(t)} <span class="text-slate-500">${getTagCount(t)}</span>
@@ -2333,18 +2381,24 @@ function renderTagDetail() {
 
       <!-- 词条列表 -->
       <div>
-        <div class="text-xs text-slate-400 uppercase tracking-wider mb-2">📚 标签下的词条 (${words.length})</div>
-        ${words.length === 0
+        <div class="text-xs text-slate-400 uppercase tracking-wider mb-2 flex items-baseline gap-2">
+          📚 标签下的词条
+          <span class="text-slate-500 normal-case font-normal tracking-normal">累计 ${totalCount} 条${directCount < totalCount ? ` · 直接 ${directCount} · 子代 ${totalCount - directCount}` : ''}</span>
+        </div>
+        ${totalCount === 0
           ? `<div class="text-slate-500 text-sm italic">暂无词条。点 [+ 加词] 给此标签添加。</div>`
           : `<div class="space-y-1.5">
-              ${words.map(e => {
+              ${allWords.map(e => {
                 const senses = (e.meaning || '').split(/[;；]/)[0];
                 const tags = (e.tags || []).filter(t => t !== tag).slice(0, 4);
+                const directHit = (e.tags || []).includes(tag);
+                const inheritedFrom = !directHit ? (e.tags || []).find(t => getTagSubtree(tag).includes(t)) : null;
                 return `
                   <div onclick="jumpFromTagBrowserToEntry('${e.id}')" class="cursor-pointer px-3 py-2 rounded-lg bg-white/[0.03] hover:bg-white/[0.08] border border-white/5 hover:border-[#34d399]/30 transition flex items-baseline gap-2 flex-wrap">
                     <span class="text-lg font-bold text-white">${escapeHtml(e.hangul)}</span>
                     ${e.roman ? `<span class="text-xs text-slate-500 font-mono">/${escapeHtml(e.roman)}/</span>` : ''}
                     <span class="text-xs text-slate-400 truncate flex-1 min-w-0">${escapeHtml(senses)}</span>
+                    ${inheritedFrom ? `<span class="text-[9px] text-[#a78bfa]" title="继承自子标签">${escapeHtml(inheritedFrom)}↗</span>` : ''}
                     ${tags.map(t => `<span class="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-slate-400">${escapeHtml(t)}</span>`).join('')}
                   </div>
                 `;
@@ -3019,20 +3073,34 @@ ${currentGraph}
 - related: 横向相关但非父子关系的标签
 
 【分类原则】
-1. 自由创建中间层级（如「行为」「自然」「抽象」「身体」「时间」「空间」「数量」「情感」等）
-2. 一个标签只能有一个 parent（避免循环）
-3. 跨域词不强行归一（如「烹饪·蒸」和「气象·闷热」可以共用「蒸」这个标签）
-4. 发现明显同义（如「烹饪」「料理」「做饭」）时，挑一个作 canonical，其余放 aliases
-5. 顶级标签控制在 5-8 个，深度一般 2-3 层
-6. **必须覆盖所有 ${tagData.length} 个输入标签**——如果某标签确实难以归类，把它挂到一个名为「其他」的顶级桶下（parent="其他"），不要省略
-7. 所有出现在 parent 字段里的标签名，自身也必须在 tagGraph 里有完整条目（包括你新建的「其他」「行为」等中间层级）
-8. 看到像是随手记的标签（如「TODO」「重要」「待复习」），统一挂到「笔记」顶级桶下
+1. **每个标签必须找到有意义的语义父级**。**禁止用「其他」「杂项」「未分类」这类万能桶**——这种桶没有检索价值。如果某标签看起来跨域，按**最主要的语义**归类即可。
+2. 推荐的顶级分类参考（可自由增删调整）：
+   - 「行为」：动作、过程（吃、走、说、做…）
+   - 「状态」：性质、情况（热、冷、累、好…）
+   - 「物体」：实体名词（食物、器物、建筑…）
+   - 「自然」：天文、地理、气象、生物（雨、山、树、狗…）
+   - 「身体」：身体部位、生理（手、头、饿、睡…）
+   - 「社会」：人际、文化、组织（家庭、学校、国家…）
+   - 「抽象」：概念、关系、数量、时间（爱、数、年、原因…）
+   - 「语言」：语法、修辞、文字（敬语、感叹、谚文…）
+3. 一个标签只能有一个 parent（避免循环）
+4. 跨域词不强行归一（如「烹饪·蒸」和「气象·闷热」可以共用「蒸」这个标签）
+5. 发现明显同义（如「烹饪」「料理」「做饭」）时，挑一个作 canonical，其余放 aliases
+6. 顶级标签控制在 6-10 个，深度一般 2-3 层
+7. **必须覆盖所有 ${tagData.length} 个输入标签**
+8. 所有出现在 parent 字段里的标签名，自身也必须在 tagGraph 里有完整条目
+9. 看到像随手记的标签（如「TODO」「重要」「待复习」），挂到「学习管理」这种有具体语义的桶下，**不要用「其他」**
+
+【自检（输出前请验证）】
+- 输出条目数 >= ${tagData.length}？
+- 每个原始输入标签都在 tagGraph 里有条目？
+- 没有 parent="其他" 或类似的万能桶？
+- 所有 parent 引用都有对应条目？
+- 没有循环引用？
 
 【输出要求】
 仅输出严格 JSON，无任何额外文字、markdown 代码块。格式：
-{"tagGraph":{"<标签名>":{"parent":"<父标签或null>","aliases":["<同义>"],"related":["<相关>"]}, ...}}
-
-再次强调：输出条目数 >= ${tagData.length}（输入标签全要 + 你新建的中间层级），所有 parent 引用都要有对应条目。`;
+{"tagGraph":{"<标签名>":{"parent":"<父标签或null>","aliases":["<同义>"],"related":["<相关>"]}, ...}}`;
 }
 
 async function restructureTagsWithAI() {
@@ -3104,14 +3172,12 @@ function showTagRestructurePreview(rawGraph) {
   };
   breakCycles();
 
-  // 3) 漏掉的输入标签 → 挂到「其他」桶
+  // 3) 漏掉的输入标签 → 提升为顶级（不用「其他」万能桶）
+  //    预览时会明显标出，让用户决定手动归类或重跑
   const missing = inputTags.filter(t => !newGraph[t]);
   if (missing.length > 0) {
-    if (!newGraph['其他']) {
-      newGraph['其他'] = { parent: null, aliases: [], related: [] };
-    }
     missing.forEach(t => {
-      newGraph[t] = { parent: '其他', aliases: [], related: [] };
+      newGraph[t] = { parent: null, aliases: [], related: [] };
     });
   }
 
@@ -3140,15 +3206,15 @@ function showTagRestructurePreview(rawGraph) {
         <div class="mt-1 flex flex-wrap gap-2">
           ${newKeys.length > 0 ? `<span class="text-[#34d399]">新增 ${newKeys.length}</span>` : ''}
           ${removedKeys.length > 0 ? `<span class="text-[#fda4af]">移除 ${removedKeys.length}</span>` : ''}
-          ${bucketed > 0 ? `<span class="text-[#fbbf24]">AI 漏掉 ${bucketed} 个，已挂入「其他」</span>` : ''}
+          ${bucketed > 0 ? `<span class="text-[#fbbf24]">AI 漏掉 ${bucketed} 个（已留作顶级）</span>` : ''}
           ${aliased > 0 ? `<span class="text-[#a78bfa]">${aliased} 个同义归并</span>` : ''}
         </div>
       </div>
 
       ${bucketed > 0 ? `
         <div class="bg-[#fbbf24]/10 border border-[#fbbf24]/30 rounded-lg p-3 text-xs">
-          <div class="text-[#fcd34d] font-semibold mb-1">⚠ AI 漏处理的标签（${bucketed} 个）</div>
-          <div class="text-slate-400">已自动挂到「其他」桶下，应用后可手动调整：</div>
+          <div class="text-[#fcd34d] font-semibold mb-1">⚠ AI 漏处理的标签（${bucketed} 个，已留作顶级）</div>
+          <div class="text-slate-400">建议点 [↻ 重跑] 让 AI 重新分类，或应用后手动调整父级：</div>
           <div class="mt-1 text-slate-300">${missing.map(t => `<span class="inline-block px-1.5 py-0.5 mr-1 mb-1 rounded bg-white/5 text-[10px]">${escapeHtml(t)}</span>`).join('')}</div>
         </div>
       ` : ''}
