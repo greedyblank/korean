@@ -1,0 +1,18 @@
+{
+  "name": "韩语音义体系地图",
+  "short_name": "한어원지도",
+  "description": "韩语音义体系地图 · 어원 지도（多端同步）",
+  "lang": "ko",
+  "dir": "ltr",
+  "start_url": "etymology_map.html",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

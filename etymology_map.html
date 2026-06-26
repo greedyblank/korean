@@ -4,6 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>韩语词源体系地图 · 어원 지도</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f172a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="한어원">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
   :root {
@@ -181,7 +189,6 @@
     color: #6ee7b7;
     border-color: rgba(52,211,153,0.4);
     transform: translateY(-1px);
-  }
     margin: 1px;
   }
   .toast {
@@ -250,6 +257,9 @@
         </button>
         <button onclick="openSettingsModal()" class="w-8 h-8 flex items-center justify-center text-sm rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-400 hover:text-slate-200 transition" title="LLM 设置">
           ⚙
+        </button>
+        <button onclick="openSyncModal()" class="w-8 h-8 flex items-center justify-center text-sm rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-400 hover:text-slate-200 transition" title="多端同步">
+          ☁️
         </button>
         <button onclick="cycleTTSRateBtn()" id="tts-rate-btn" class="px-2 h-8 flex items-center justify-center text-xs rounded-lg bg-[#34d399]/10 hover:bg-[#34d399]/20 border border-[#34d399]/30 text-[#6ee7b7] transition font-mono" title="朗读速度（点击切换）">
           <span id="tts-rate-label">1×</span>
@@ -862,6 +872,39 @@
   </div>
 </div>
 
+<!-- ============================== 多端同步 Modal ============================== -->
+<div id="sync-modal" class="hidden fixed inset-0 z-50 modal-backdrop flex items-center justify-center p-4">
+  <div class="glass rounded-2xl p-6 max-w-md w-full">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-lg font-bold text-white">☁️ 多端同步（GitHub Gist）</h3>
+      <button onclick="closeSyncModal()" class="text-slate-400 hover:text-white">✕</button>
+    </div>
+    <div class="space-y-4">
+      <p class="text-xs text-slate-400">数据通过你自己的<strong class="text-slate-200">私有 Gist</strong> 多端同步：电脑加词，手机刷新即见。Token 仅存本机 localStorage。</p>
+      <div>
+        <label class="block text-xs text-slate-400 mb-1">GitHub Token <a href="https://github.com/settings/tokens/new?scopes=gist&description=Korean-Etymology-Map" target="_blank" class="text-[#38bdf8] underline">→ 生成</a></label>
+        <input id="sync-token" type="password" placeholder="ghp_xxxx（只需 gist 权限）" class="w-full px-3 py-2 text-sm rounded-lg bg-white/5 border border-white/10 text-slate-200">
+      </div>
+      <div>
+        <label class="block text-xs text-slate-400 mb-1">Gist ID</label>
+        <input id="sync-gistid" type="text" placeholder="留空 → 点下方「自动创建」" class="w-full px-3 py-2 text-sm rounded-lg bg-white/5 border border-white/10 text-slate-200">
+      </div>
+      <label class="flex items-center gap-2 text-sm text-slate-300">
+        <input type="checkbox" id="sync-auto" checked class="rounded"> 自动同步（改了上传 + 打开/切回App时拉取）
+      </label>
+      <p class="text-xs text-amber-300/80">⚠️ Token 仅存本机，不外发第三方。公共电脑勿保存。</p>
+    </div>
+    <div class="flex items-center justify-between mt-5">
+      <button onclick="createGist()" class="px-3 py-2 text-xs rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300">✨ 自动创建 Gist</button>
+      <div class="flex items-center gap-2">
+        <span id="sync-status" class="text-xs text-slate-400">未配置</span>
+        <button onclick="syncNow()" class="px-3 py-2 text-sm rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300">🔄 同步</button>
+        <button onclick="saveSyncSettings()" class="px-4 py-2 text-sm rounded-lg bg-[#38bdf8] hover:bg-[#0ea5e9] text-slate-900 font-semibold">保存</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ============================== AI Completion Modal ============================== -->
 <div id="ai-modal" class="hidden fixed inset-0 z-50 modal-backdrop flex items-center justify-center p-4">
   <div class="glass rounded-2xl p-6 max-w-2xl w-full">
@@ -1043,6 +1086,9 @@ const VOWEL_GROUPS = [
 
 const STORAGE_KEY = 'korean_etymology_map_v1';
 const TAGGRAPH_KEY = 'korean_etymology_taggraph_v1';
+const TOMBSTONES_KEY = 'korean_etymology_tombstones_v1';   // 已删词条墓碑（跨端同步删除）
+const SYNC_KEY = 'korean_etymology_sync_v1';               // Gist 同步配置
+const META_KEY = 'korean_etymology_meta_v1';               // 同步元数据（tagGraphUpdatedAt）
 
 // =========================================================================
 // STATE
@@ -1050,6 +1096,8 @@ const TAGGRAPH_KEY = 'korean_etymology_taggraph_v1';
 let state = {
   entries: [],          // all word entries
   tagGraph: {},         // 标签图 { tagId: {parent, aliases, related} }
+  tombstones: [],       // 已删词条墓碑 [{id, deletedAt}]（跨端同步删除）
+  tagGraphUpdatedAt: 0, // tagGraph 整体时间戳（多端 last-write-wins）
   filter: {
     initialIdx: null,   // selected initial index (0-18), null = none
     vowel: null,        // when initialIdx === 11 (ㅇ), further filter by main vowel id ('a'|'eo'|'o'|'u'|'eu'|'i'|null)
@@ -1063,17 +1111,233 @@ let state = {
 // =========================================================================
 // PERSISTENCE
 // =========================================================================
+let _lastTagGraphSig = '';   // 检测 tagGraph 是否真变化（决定是否盖时间戳）
+function _saveMeta() { localStorage.setItem(META_KEY, JSON.stringify({ tagGraphUpdatedAt: state.tagGraphUpdatedAt || 0 })); }
+function _loadMeta() { try { const r = localStorage.getItem(META_KEY); if (r) state.tagGraphUpdatedAt = JSON.parse(r).tagGraphUpdatedAt || 0; } catch {} }
 function save() {
   try {
+    const tgSig = JSON.stringify(state.tagGraph || {});
+    if (tgSig !== _lastTagGraphSig) { state.tagGraphUpdatedAt = Date.now(); _lastTagGraphSig = tgSig; }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state.entries));
     localStorage.setItem(TAGGRAPH_KEY, JSON.stringify(state.tagGraph || {}));
+    localStorage.setItem(TOMBSTONES_KEY, JSON.stringify(state.tombstones || []));
+    _saveMeta();
     // 实时同步到本地文件（如果已绑定）
     if (fileSyncState.handle) {
       syncToFileDebounced();
     }
+    scheduleCloudSync();   // Gist 多端同步（debounce；未配置 token 时为空操作）
   } catch(e) {
     toast('保存失败：' + e.message, 'error');
   }
+}
+
+// =========================================================================
+// CLOUD SYNC（GitHub Gist · 多端同步）
+// =========================================================================
+// 本地改动 → debounce 上传全量快照到私有 Gist；打开/刷新/切回前台 → 拉取 → mergeState 合并。
+// 合并：entries 按 id 并集、updatedAt 大者胜；tombstones 裁决「删除」；tagGraph 整体 LWW。
+// 防环：payload 内容签名比对，未变则跳过。无定时轮询（避免消耗 API / 撞 secondary rate limit）。
+
+let syncConfig = { token: '', gistId: '', autoSync: true };
+let syncStatus = { lastPushAt: 0, lastPullAt: 0, lastError: '', busy: false };
+let _pushTimer = null, _visibilityBound = false, _rateLimitedUntil = 0, _lastPushedSig = '';
+const GIST_FILE = 'korean_etymology_map.json';
+const PUSH_DEBOUNCE = 1500;
+
+function loadSyncConfig() {
+  try { const raw = localStorage.getItem(SYNC_KEY); if (raw) syncConfig = { ...syncConfig, ...JSON.parse(raw) }; }
+  catch { /* ignore */ }
+}
+function saveSyncConfig() { localStorage.setItem(SYNC_KEY, JSON.stringify(syncConfig)); }
+function syncReady() { return !!(syncConfig.token && syncConfig.gistId); }
+
+function buildPayload() {
+  return {
+    version: 3,
+    entries: state.entries || [],
+    tagGraph: state.tagGraph || {},
+    tombstones: state.tombstones || [],
+    tagGraphUpdatedAt: state.tagGraphUpdatedAt || 0,
+  };
+}
+const payloadSig = (p) => JSON.stringify(p);
+
+// 合并本地与远端快照（纯函数，便于单测）
+function mergeState(local, remote) {
+  const byId = new Map((local.entries || []).map(e => [e.id, e]));
+  for (const r of (remote.entries || [])) {
+    if (!r || !r.id) continue;
+    const l = byId.get(r.id);
+    if (!l || (r.updatedAt || 0) > (l.updatedAt || 0)) byId.set(r.id, r);
+  }
+  const tomMap = new Map((local.tombstones || []).map(t => [t.id, t]));
+  for (const t of (remote.tombstones || [])) {
+    if (!t || !t.id) continue;
+    const old = tomMap.get(t.id);
+    if (!old || (t.deletedAt || 0) > (old.deletedAt || 0)) tomMap.set(t.id, t);
+  }
+  const entries = [...byId.values()].filter(e => {
+    const tp = tomMap.get(e.id);
+    return !(tp && (tp.deletedAt || 0) >= (e.updatedAt || 0));
+  });
+  const ltg = local.tagGraphUpdatedAt || 0, rtg = remote.tagGraphUpdatedAt || 0;
+  const tagGraph = rtg > ltg ? (remote.tagGraph || {}) : (local.tagGraph || {});
+  return { entries, tombstones: [...tomMap.values()], tagGraph, tagGraphUpdatedAt: Math.max(ltg, rtg) };
+}
+
+async function pushToGist() {
+  if (!syncReady() || syncStatus.busy) return;
+  if (Date.now() < _rateLimitedUntil) return;
+  const sig = payloadSig(buildPayload());
+  if (sig === _lastPushedSig) return;
+  syncStatus.busy = true;
+  try {
+    const res = await fetch(`https://api.github.com/gists/${syncConfig.gistId}`, {
+      method: 'PATCH',
+      headers: { 'Authorization': `Bearer ${syncConfig.token}`, 'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ description: 'Korean Etymology Map (auto-synced)', files: { [GIST_FILE]: { content: sig } } }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    _lastPushedSig = sig;
+    syncStatus.lastPushAt = Date.now();
+    syncStatus.lastError = '';
+  } catch (e) {
+    syncStatus.lastError = '上传失败：' + e.message;
+    if (/403|rate limit/i.test(e.message)) {
+      _rateLimitedUntil = Date.now() + 5 * 60 * 1000;
+      syncStatus.lastError = 'GitHub 限流，5 分钟后自动重试';
+    }
+  } finally {
+    syncStatus.busy = false;
+    updateSyncStatusUI();
+  }
+}
+
+async function pullFromGist() {
+  if (!syncReady() || syncStatus.busy) return;
+  if (Date.now() < _rateLimitedUntil) return;
+  syncStatus.busy = true;
+  try {
+    const res = await fetch(`https://api.github.com/gists/${syncConfig.gistId}`, {
+      headers: { 'Authorization': `Bearer ${syncConfig.token}`, 'Accept': 'application/vnd.github+json' },
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    const raw = data.files?.[GIST_FILE]?.content;
+    syncStatus.lastPullAt = Date.now();
+    if (!raw) { syncStatus.lastError = ''; updateSyncStatusUI(); return; }
+    const remote = JSON.parse(raw);
+    const before = payloadSig(buildPayload());
+    const merged = mergeState(buildPayload(), remote);
+    const after = payloadSig(merged);
+    if (after === before) { syncStatus.lastError = ''; updateSyncStatusUI(); return; }
+    state.entries = merged.entries;
+    state.tombstones = merged.tombstones;
+    state.tagGraph = merged.tagGraph;
+    state.tagGraphUpdatedAt = merged.tagGraphUpdatedAt;
+    _lastTagGraphSig = JSON.stringify(state.tagGraph || {});
+    _lastPushedSig = after;
+    save();
+    render();
+    renderStats();
+    syncStatus.lastError = '';
+    updateSyncStatusUI();
+    toast('已同步云端数据', 'success');
+  } catch (e) {
+    syncStatus.lastError = '拉取失败：' + e.message;
+    updateSyncStatusUI();
+  } finally {
+    syncStatus.busy = false;
+  }
+}
+
+function scheduleCloudSync() {
+  if (!syncConfig.autoSync || !syncReady()) return;
+  clearTimeout(_pushTimer);
+  _pushTimer = setTimeout(pushToGist, PUSH_DEBOUNCE);
+}
+
+async function createGist() {
+  const tokEl = document.getElementById('sync-token');
+  if (tokEl) syncConfig.token = tokEl.value.trim();
+  if (!syncConfig.token) { toast('请先填写 GitHub Token', 'error'); return; }
+  try {
+    const res = await fetch('https://api.github.com/gists', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${syncConfig.token}`, 'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ description: 'Korean Etymology Map (auto-synced)', public: false, files: { [GIST_FILE]: { content: payloadSig(buildPayload()) } } }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    syncConfig.gistId = data.id;
+    const gidEl = document.getElementById('sync-gistid');
+    if (gidEl) gidEl.value = data.id;
+    saveSyncConfig();
+    _lastPushedSig = payloadSig(buildPayload());
+    toast('已创建私有 Gist：' + data.id, 'success');
+    updateSyncStatusUI();
+    startCloudSync();
+  } catch (e) {
+    toast('创建失败：' + e.message + '（确认 token 勾选了 gist 权限）', 'error');
+  }
+}
+
+async function syncNow() {
+  if (!syncReady()) { toast('请先填写 Token 和 Gist ID', 'error'); return; }
+  toast('同步中…');
+  await pullFromGist();
+  await pushToGist();
+}
+
+function startCloudSync() {
+  loadSyncConfig();
+  if (!syncReady()) return;
+  pullFromGist();
+  if (!_visibilityBound) {
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && syncReady()) pullFromGist();
+    });
+    _visibilityBound = true;
+  }
+  // 无定时轮询：只在打开/刷新/切回前台拉取
+}
+
+function fmtTime(ts) {
+  if (!ts) return '—';
+  const d = new Date(ts);
+  return d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0');
+}
+function updateSyncStatusUI() {
+  const el = document.getElementById('sync-status');
+  if (!el) return;
+  if (!syncReady()) { el.textContent = '未配置'; return; }
+  const parts = [];
+  if (syncStatus.busy) parts.push('同步中…');
+  if (syncStatus.lastError) parts.push('⚠ ' + syncStatus.lastError);
+  parts.push(`↑ ${fmtTime(syncStatus.lastPushAt)}`);
+  parts.push(`↓ ${fmtTime(syncStatus.lastPullAt)}`);
+  el.textContent = parts.join(' · ');
+}
+
+function openSyncModal() {
+  document.getElementById('sync-token').value = syncConfig.token || '';
+  document.getElementById('sync-gistid').value = syncConfig.gistId || '';
+  document.getElementById('sync-auto').checked = syncConfig.autoSync !== false;
+  document.getElementById('sync-modal').classList.remove('hidden');
+  updateSyncStatusUI();
+}
+function closeSyncModal() {
+  document.getElementById('sync-modal').classList.add('hidden');
+}
+function saveSyncSettings() {
+  syncConfig.token = document.getElementById('sync-token').value.trim();
+  syncConfig.gistId = document.getElementById('sync-gistid').value.trim();
+  syncConfig.autoSync = document.getElementById('sync-auto').checked;
+  saveSyncConfig();
+  closeSyncModal();
+  toast(syncReady() ? '同步设置已保存' : '已保存（还需 Token + Gist ID 才能同步）', 'success');
+  startCloudSync();
 }
 
 // =========================================================================
@@ -1257,10 +1521,16 @@ function load() {
     if (raw) state.entries = JSON.parse(raw);
     const tg = localStorage.getItem(TAGGRAPH_KEY);
     state.tagGraph = tg ? JSON.parse(tg) : {};
+    const tb = localStorage.getItem(TOMBSTONES_KEY);
+    if (tb) state.tombstones = JSON.parse(tb);
+    _loadMeta();
+    _lastTagGraphSig = JSON.stringify(state.tagGraph || {});
   } catch(e) {
     console.error('Load failed:', e);
     state.entries = [];
     state.tagGraph = {};
+    state.tombstones = [];
+    _lastTagGraphSig = '';
   }
 }
 
@@ -2382,6 +2652,7 @@ function deleteEntry(id) {
   if (!e) return;
   if (!confirm(`确定删除 "${e.hangul}"？此操作不可撤销。`)) return;
   state.entries = state.entries.filter(x => x.id !== id);
+  state.tombstones = [...(state.tombstones || []), { id, deletedAt: Date.now() }];   // 墓碑，跨端同步删除
   if (state.selectedEntryId === id) state.selectedEntryId = null;
   save();
   render();
@@ -2481,8 +2752,8 @@ function buildAIEntryPrompt(input, existingTags) {
 - wordClass: 上述五类之一
 - hanja: 若为汉字词，给出对应汉字（如 사랑→"愛"、산→"山"、불안→"不安"）；否则空字符串 ""
 - root: 词根（默认 hangul 第一个音节）
-- decomp: 音素分拆，是造物主矩阵的简单版，如：物品基础价值（비）向外膨胀，产生了让人紧绷、肉痛的撕裂感（싸），状态固化成修饰语（ㄴ）
-- analysis: **重点**。基于「造物主矩阵」的音韵物理分析 20-80 字（尽量简短，可适当换行）（不要过分拆解，例如：무겁다——一个巨大的实体（ㅁ）向下坠落（ㅜ），形成高密度的硬块（ㄱ+ㅓ）（或者直接解释为“东西”），最终重重地砸在底面上（ㅂ），而你就不用解释다。而其他词汇解读时可以把무合起来组合解释为“重、重量”）。
+- decomp: 音素分拆，是造物主矩阵的简单版（不必[]进行注音，可罗马注音标记），如：비싼：物品基础价值（비）向外膨胀，产生了让人紧绷、肉痛的撕裂感（싸），状态固化成修饰语（ㄴ）→ 昂贵的；或者如：直接用「重、重量」等语义核心词替代过于机械的音素解释（即可针对复杂词汇可大块拆解）；或语素标记如： 다(谓词标记)。
+- analysis: **重点**。基于「造物主矩阵」的音韵物理分析 20-80 字（尽量简短，可适当换行）（不必[]进行注音，可罗马注音标记）（不要过分拆解，例如：무겁다——一个巨大的实体（ㅁ）向下坠落（ㅜ），形成高密度的硬块（ㄱ+ㅓ）（或者直接解释为“东西”），最终重重地砸在底面上（ㅂ），而你就不用解释다。而其他词汇解读时可以把무合起来组合解释为“重、重量”）。
     * 若 wordClass=固有韩语：必须用矩阵拆解"为什么这样发音"——依次说明辅音骨架（19 初声）、元音坐标（21 中声）、收音着陆（27 终声）、张力调节（平/紧/送气）、可能的元音交替（Ablaut）。
     * 若 wordClass=汉字词：不要硬套矩阵。简述汉字音进入韩语后的音变规则即可。
     * 若 wordClass=外来语：不要硬套矩阵。说明源语发音 + 韩语音系适配规则。
@@ -2514,7 +2785,7 @@ function buildAIEntryPrompt(input, existingTags) {
 **字段适用性总原则：只填适用字段，不适用的留空/ false。一个名词通常不会有 speechLevel/irregular；一个动词通常不会有 animacy/honNoun。**
 - tags: 1-3 个标签，描述语义/语法类别。
 ${tagHint}
-【造物主矩阵参考框架】
+【造物主矩阵参考框架（矩阵可能拆分过细了，实际解读词汇时可能不需要太细）】
 
 A. 初声（19 种 · 辅音骨架 · 物理动作）：
    - 舌根 ㄱ/ㄲ/ㅋ：边缘、外壳、角度 / 极度坚硬壳、向内压缩 / 剧烈扩张、爆裂
@@ -5143,6 +5414,8 @@ window.addEventListener('scroll', () => {
 // INIT
 // =========================================================================
 load();
+startCloudSync();   // Gist 多端同步：打开/刷新即拉取 + 切回前台
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 loadSettings();
 loadCompletionConfig();
 // 一次性迁移历史韩文枚举值 → 中文（用户偏好全中文界面）
