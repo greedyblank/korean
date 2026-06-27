@@ -109,7 +109,7 @@
   ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
   /* 可折叠的 header 子区块：默认展开 */
   .header-collapsible {
-    max-height: 200px;
+    max-height: 500px;
     opacity: 1;
     overflow: hidden;
     transition: max-height 0.28s cubic-bezier(0.4,0,0.2,1),
@@ -239,7 +239,7 @@
         </div>
       </div>
 
-      <div class="flex items-center gap-1.5">
+      <div class="flex flex-wrap items-center gap-1.5 justify-end">
         <button onclick="openAddModal()" class="px-2.5 py-1.5 text-xs rounded-lg bg-[#38bdf8]/20 hover:bg-[#38bdf8]/30 border border-[#38bdf8]/40 text-[#7dd3fc] transition">
           + 新词条
         </button>
@@ -2214,7 +2214,6 @@ function renderWordsList() {
           </div>
           <button onclick="event.stopPropagation(); playKorean('${escapeHtml(e.hangul)}')" class="tts-btn" title="朗读 ${escapeHtml(e.hangul)}" aria-label="朗读">▶</button>
         </div>
-        ${e.pron ? `<div class="text-[10px] text-[#fbbf24] font-mono mb-1">${escapeHtml(e.pron)}</div>` : ''}
         <div class="text-xs text-slate-300 space-y-0.5">
           ${senses.map(s => `<div>· ${escapeHtml(s)}</div>`).join('')}
         </div>
@@ -2263,7 +2262,6 @@ function renderDetail() {
         <div class="min-w-0">
           <div class="flex items-baseline gap-3 flex-wrap">
             <h2 class="text-5xl font-bold text-white">${escapeHtml(e.hangul)}</h2>
-            ${e.pron ? `<span class="text-lg text-[#fbbf24] font-mono">${escapeHtml(e.pron)}</span>` : ''}
             ${e.roman ? `<span class="text-base text-slate-400 font-mono">/${escapeHtml(e.roman)}/</span>` : ''}
             <button onclick="playKorean('${escapeHtml(e.hangul)}')" class="tts-btn-lg" title="朗读 ${escapeHtml(e.hangul)}" aria-label="朗读">▶</button>
           </div>
@@ -3021,7 +3019,6 @@ function renderAIEntryPreview(entry) {
       <div class="flex items-baseline gap-2 mb-2 flex-wrap">
         <span class="text-3xl font-bold text-white">${escapeHtml(entry.hangul)}</span>
         ${entry.roman ? `<span class="text-xs text-slate-500 font-mono">/${escapeHtml(entry.roman)}/</span>` : ''}
-        ${entry.pron ? `<span class="text-xs text-[#fbbf24] font-mono">${escapeHtml(entry.pron)}</span>` : ''}
       </div>
       <div class="flex items-center gap-1.5 mb-3 flex-wrap">
         ${wcBadge}${hanjaBadge}${posBadge}${lvlBadge}${honBadge}${derivBadge}
