@@ -378,6 +378,19 @@
   </div>
 </section>
 
+<!-- ============================== 最近添加 ============================== -->
+<section class="max-w-[1600px] mx-auto px-4 mb-16">
+  <h2 class="text-sm font-semibold text-slate-300 cursor-pointer select-none" onclick="toggleRecent()">🕘 最近添加 <span id="recent-arrow">▸</span></h2>
+  <div id="recent-body" class="hidden mt-2">
+    <div class="flex gap-2 mb-2">
+      <button class="recent-n-btn px-3 py-1 text-xs rounded-lg border border-white/10 bg-[#38bdf8]/20 text-[#7dd3fc]" onclick="setRecentN(10,event)">10</button>
+      <button class="recent-n-btn px-3 py-1 text-xs rounded-lg border border-white/10 text-slate-400" onclick="setRecentN(20,event)">20</button>
+      <button class="recent-n-btn px-3 py-1 text-xs rounded-lg border border-white/10 text-slate-400" onclick="setRecentN(50,event)">50</button>
+    </div>
+    <div id="recent-list"></div>
+  </div>
+</section>
+
 <!-- ============================== Add/Edit Modal ============================== -->
 <div id="add-modal" class="hidden fixed inset-0 z-50 modal-backdrop flex items-center justify-center p-4">
   <div class="glass rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
@@ -2498,11 +2511,58 @@ function selectEntry(id) {
 function onSearch(value) {
   state.filter.search = value;
   document.getElementById('search-clear').classList.toggle('hidden', !value.trim());
+  if (value.trim()) {
+    const m = getFilteredBySearch();
+    state.selectedEntryId = (m && m[0]) ? m[0].id : null;
+  } else {
+    state.selectedEntryId = null;
+  }
   render();
+  if (state.selectedEntryId) {
+    requestAnimationFrame(() => {
+      const el = document.querySelector('.word-item.active, [data-active="true"]');
+      if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    });
+  }
 }
 function clearSearch() {
   document.getElementById('search-input').value = '';
   onSearch('');
+}
+
+// 最近添加（按 createdAt 倒序，默认收起）
+let _recentN = 10, _recentCollapsed = true;
+function toggleRecent() {
+  _recentCollapsed = !_recentCollapsed;
+  const body = document.getElementById('recent-body');
+  const arr = document.getElementById('recent-arrow');
+  if (body) body.classList.toggle('hidden', _recentCollapsed);
+  if (arr) arr.textContent = _recentCollapsed ? '▸' : '▾';
+  if (!_recentCollapsed) renderRecent();
+}
+function setRecentN(n, ev) {
+  _recentN = n;
+  document.querySelectorAll('.recent-n-btn').forEach(b => { b.classList.remove('bg-[#38bdf8]/20','text-[#7dd3fc]'); b.classList.add('text-slate-400'); });
+  if (ev && ev.target) { ev.target.classList.add('bg-[#38bdf8]/20','text-[#7dd3fc]'); ev.target.classList.remove('text-slate-400'); }
+  renderRecent();
+}
+function renderRecent() {
+  const list = document.getElementById('recent-list');
+  if (!list) return;
+  const items = state.entries
+    .filter(e => e.createdAt)
+    .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+    .slice(0, _recentN);
+  list.innerHTML = items.length ? items.map(e => {
+    const d = e.createdAt ? new Date(e.createdAt) : null;
+    const ts = d ? `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}` : '';
+    return `<div class="rounded-lg p-2 mb-1 hover:bg-white/5 cursor-pointer border border-white/5" onclick="selectRecentEntry('${e.id}')"><span class="text-[#7dd3fc] font-medium">${escapeHtml(e.hangul)}</span> <span class="text-slate-300 text-sm">${escapeHtml((e.meaning||'').split(/[;；]/)[0])}</span><span class="text-slate-500 text-xs float-right">${ts}</span></div>`;
+  }).join('') : '<div class="text-slate-500 text-sm p-2">还没有用户添加的词条</div>';
+}
+function selectRecentEntry(id) {
+  state.selectedEntryId = id;
+  state.filter.search = '';
+  render();
 }
 function clearSearchSilent() {
   document.getElementById('search-input').value = '';
