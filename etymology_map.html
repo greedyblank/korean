@@ -359,6 +359,10 @@
           <span id="words-title">词条</span>
           <span id="words-count" class="text-xs text-slate-500 ml-1"></span>
         </h3>
+        <div class="flex items-center gap-1">
+          <button onclick="clearTagFilter()" class="text-[10px] px-1.5 py-0.5 rounded border border-white/10 text-slate-400 hover:text-slate-200 hover:bg-white/5 transition" title="清除标签筛选">清签</button>
+          <button onclick="clearAllFilters()" class="text-[10px] px-1.5 py-0.5 rounded border border-white/10 text-slate-400 hover:text-slate-200 hover:bg-white/5 transition" title="清除全部筛选">清搜</button>
+        </div>
       </div>
       <div id="words-list" class="space-y-2 overflow-y-auto flex-1 max-h-[70vh]"></div>
     </div>
@@ -973,6 +977,7 @@
       </div>
       <div class="flex justify-end gap-2 pt-2">
         <button onclick="closeAIModal()" class="px-4 py-2 text-sm rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 transition">取消</button>
+        <button onclick="runAIBackground()" id="ai-bg-btn" class="px-4 py-2 text-sm rounded-lg bg-[#fbbf24]/15 hover:bg-[#fbbf24]/25 border border-[#fbbf24]/30 text-[#fde68a] transition" title="关闭弹窗后在后台运行，完成后通知">后台运行</button>
         <button onclick="runAICompletion()" id="ai-run-btn" class="px-4 py-2 text-sm rounded-lg bg-gradient-to-r from-[#a855f7] to-[#ec4899] text-white font-semibold transition">开始补全</button>
       </div>
     </div>
@@ -1625,6 +1630,26 @@ function _migrateTagPollution(entries, tagGraph) {
   }
 }
 
+// 修复ㅇ起首词的词根：ㅇ是无声占位符，词根应为整个音节
+function _migrateIeungRoots(entries) {
+  if (localStorage.getItem('korean_ieung_root_v1')) return;
+  let fixed = 0;
+  entries.forEach(e => {
+    if (!e.hangul) return;
+    const oldRoot = e.root;
+    const newRoot = getDefaultRoot(e.hangul);
+    if (oldRoot !== newRoot) {
+      e.root = newRoot;
+      fixed++;
+    }
+  });
+  if (fixed > 0) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+    console.log(`[ㅇ词根修复] 修正了 ${fixed} 个ㅇ起首词的词根（无声占位符→实际音节）`);
+  }
+  localStorage.setItem('korean_ieung_root_v1', '1');
+}
+
 // =========================================================================
 // TAG GRAPH · 标签图（带父链的多根树）
 //   tagGraph[tagId] = { parent: string|null, aliases: [string], related: [string] }
@@ -1769,7 +1794,10 @@ function getInitialChar(hangul) {
   return idx !== null ? INITIALS[idx].char : '?';
 }
 function getDefaultRoot(hangul) {
-  return hangul ? hangul.charAt(0) : '';
+  if (!hangul) return '';
+  // ㅇ 起首词：词根取整个音节（ㅇ是无声占位符，元音才携带实际音值）
+  if (hangul.charAt(0) === 'ㅇ') return hangul;
+  return hangul.charAt(0);
 }
 
 // ---- 拉丁化（Revised Romanization 简化版，逐音节转写，不处理复杂同化规则）----
@@ -2176,15 +2204,40 @@ function renderInitialGrid() {
   grid.innerHTML = html;
 }
 
-// 初声按五音顺序排列：牙→舌→唇→齿→喉→元音
+// 初声按五音顺序排列：牙→舌→唇→齿→喉→元音6系
 const _WUYIN_ORDER = (() => {
   const order = {};
-  // 牙音: ㄱ(0) ㄲ(1) ㅋ(15) → 舌音 → 唇音 → 齿音 → 喉音 → 元音(ㅇ=11)
-  [0,1,15, 2,3,4,5,16, 6,7,8,17, 9,10,12,13,14, 18, 11].forEach((idx, i) => { order[idx] = i; });
+  // 牙: ㄱ(0) ㄲ(1) ㅋ(15) → 舌: ㄴㄷㄸㄹㅌ → 唇: ㅁㅂㅃㅍ → 齿: ㅅㅆㅈㅉㅊ → 喉: ㅎ → 元音6系
+  [0,1,15, 2,3,4,5,16, 6,7,8,17, 9,10,12,13,14, 18].forEach((idx, i) => { order[idx] = i; });
+  // 元音6系：a(0) eo(1) o(2) u(3) eu(4) i(5) — 使用负值避免与辅音冲突
+  VOWEL_GROUPS.forEach((g, i) => { order['v_'+g.id] = 100 + i; });
   return order;
 })();
+// 获取分组键：辅音用数字索引，ㅇ起首按元音系用'v_'+id
+function _groupKey(hangul) {
+  const idx = getInitialIdx(hangul);
+  if (idx !== 11) return String(idx);
+  const v = getMainVowelId(hangul);
+  return v ? 'v_' + v : '11';
+}
+
 function sortInitialKeys(keys) {
-  return keys.sort((a, b) => (_WUYIN_ORDER[Number(a)] ?? 99) - (_WUYIN_ORDER[Number(b)] ?? 99));
+  return keys.sort((a, b) => {
+    const oa = _WUYIN_ORDER[a] ?? (a.startsWith('v_') ? 100 : 99);
+    const ob = _WUYIN_ORDER[b] ?? (b.startsWith('v_') ? 100 : 99);
+    return oa - ob;
+  });
+}
+
+// 元音系分组标题渲染
+function _vowelGroupHeaderHtml(vowelId, count, onClick) {
+  const g = VOWEL_GROUPS.find(v => v.id === vowelId);
+  if (!g) return '';
+  return `<div style="font-size:10px;color:var(--fg-muted);padding:8px 10px 4px;display:flex;align-items:center;gap:5px;border-radius:6px;background:rgba(255,255,255,0.02);margin-bottom:2px;cursor:pointer;" onclick="${onClick}" onmouseover="this.style.background='rgba(255,255,255,0.04)'" onmouseout="this.style.background='rgba(255,255,255,0.02)'">
+    <span class="text-lg font-bold" style="color:#a78bfa;min-width:20px;">${g.char}</span>
+    <span style="font-size:11px;color:var(--fg-dim);">${g.roman}</span>
+    <span style="font-size:10px;color:var(--fg-dim);">${count} 词根 · ${g.label} · ${g.desc}</span>
+  </div>`;
 }
 
 function renderRootsList() {
@@ -2193,7 +2246,7 @@ function renderRootsList() {
   const countEl = document.getElementById('roots-count');
   const backBtn = document.getElementById('back-to-all-btn');
 
-  // 分组标题 HTML：ㄱ (g) · 舌根收紧·阻断截断
+  // 辅音分组标题 HTML：ㄱ (g) · 舌根收紧·阻断截断
   const groupHeaderHtml = (init, count, onClick) => {
     const pron = init.roman ? ` (${init.roman})` : '';
     const core = init.core ? ` · ${init.core}` : '';
@@ -2202,6 +2255,23 @@ function renderRootsList() {
       <span style="font-size:11px;color:var(--fg-dim);">${init.roman || ''}</span>
       <span style="font-size:10px;color:var(--fg-dim);">${count} 词根${core}</span>
     </div>`;
+  };
+
+  // 渲染一个分组（辅音或元音系）
+  const renderGroup = (key, rootsInGroup) => {
+    let html = '';
+    if (key.startsWith('v_')) {
+      const vowelId = key.slice(2);
+      html += _vowelGroupHeaderHtml(vowelId, rootsInGroup.length, `event.stopPropagation();selectVowelInitial('${vowelId}')`);
+    } else {
+      const idx = Number(key);
+      const init = INITIALS[idx];
+      html += groupHeaderHtml(init, rootsInGroup.length, `event.stopPropagation();selectInitial(${idx})`);
+    }
+    rootsInGroup.forEach(({ root, count }) => {
+      html += rootItemHtml(root, count, state.highlightRoot === root);
+    });
+    return html;
   };
 
   // 单个词根项 HTML
@@ -2238,23 +2308,19 @@ function renderRootsList() {
     matches.forEach(e => {
       const r = e.root || getDefaultRoot(e.hangul);
       const idx = getInitialIdx(e.hangul);
-      if (!rootMap.has(r)) rootMap.set(r, { count: 0, initialIdx: idx });
+      const gk = _groupKey(e.hangul);
+      if (!rootMap.has(r)) rootMap.set(r, { count: 0, initialIdx: idx, groupKey: gk });
       rootMap.get(r).count++;
     });
     const grouped = {};
     rootMap.forEach((info, root) => {
-      const idx = info.initialIdx;
-      if (!grouped[idx]) grouped[idx] = [];
-      grouped[idx].push({ root, count: info.count });
+      const gk = info.groupKey || String(info.initialIdx);
+      if (!grouped[gk]) grouped[gk] = [];
+      grouped[gk].push({ root, count: info.count });
     });
     let html = '';
-    sortInitialKeys(Object.keys(grouped)).forEach(idx => {
-      const init = INITIALS[Number(idx)];
-      const rootsInGroup = grouped[idx];
-      html += groupHeaderHtml(init, rootsInGroup.length, `event.stopPropagation();selectInitial(${idx})`);
-      rootsInGroup.forEach(({ root, count }) => {
-        html += rootItemHtml(root, count, state.highlightRoot === root);
-      });
+    sortInitialKeys(Object.keys(grouped)).forEach(gk => {
+      html += renderGroup(gk, grouped[gk]);
     });
     container.innerHTML = html;
     return;
@@ -2268,23 +2334,19 @@ function renderRootsList() {
       const r = e.root || getDefaultRoot(e.hangul);
       const idx = getInitialIdx(e.hangul);
       if (idx === null) return;
-      if (!allRoots.has(r)) allRoots.set(r, { count: 0, initialIdx: idx });
+      const gk = _groupKey(e.hangul);
+      if (!allRoots.has(r)) allRoots.set(r, { count: 0, groupKey: gk });
       allRoots.get(r).count++;
     });
     const grouped = {};
     allRoots.forEach((info, root) => {
-      const idx = info.initialIdx;
-      if (!grouped[idx]) grouped[idx] = [];
-      grouped[idx].push({ root, count: info.count });
+      const gk = info.groupKey || '0';
+      if (!grouped[gk]) grouped[gk] = [];
+      grouped[gk].push({ root, count: info.count });
     });
     let html = '';
-    sortInitialKeys(Object.keys(grouped)).forEach(idx => {
-      const init = INITIALS[Number(idx)];
-      const rootsInGroup = grouped[idx];
-      html += groupHeaderHtml(init, rootsInGroup.length, `event.stopPropagation();selectInitial(${idx})`);
-      rootsInGroup.forEach(({ root, count }) => {
-        html += rootItemHtml(root, count, state.highlightRoot === root);
-      });
+    sortInitialKeys(Object.keys(grouped)).forEach(gk => {
+      html += renderGroup(gk, grouped[gk]);
     });
     titleEl.textContent = '全部词根';
     countEl.textContent = `${allRoots.size} 个`;
@@ -2511,9 +2573,11 @@ function renderDetail() {
   const tagsHtml = (e.tags || []).map(t => {
     const chain = getTagChain(t);
     const tip = chain.length > 1 ? chain.join(' › ') : `${t} · ${getTagCount(t)} 词条`;
-    const safe = escapeHtml(t).replace(/'/g, "\\'");
-    return `<span class="tag-pill" onclick="goToTag('${safe}', event)" onmouseenter="this.setAttribute('title','${escapeHtml(tip)} · 单击展开 / Shift+单击全屏')" data-tag-pill="${escapeHtml(t)}">${escapeHtml(t)}</span>`;
-  }).join('');
+    return chain.map((c, i) => {
+      const safe = escapeHtml(c).replace(/'/g, "\\'");
+      return `<span class="tag-pill${tagCloudState.selectedTag===c?' selected':''}" onclick="goToTag('${safe}', event)" title="${escapeHtml(tip)} · 单击展开 / Shift+单击全屏">${escapeHtml(c)}</span>`;
+    }).join('<span style="color:var(--fg-dim);margin:0 2px;">›</span>');
+  }).join('<span style="margin:0 4px;"></span>');
 
   panel.innerHTML = `
     <div class="fade-in">
@@ -5627,12 +5691,82 @@ function applyCompletions(batch, results) {
   return updated;
 }
 
+let _aiBackgroundRunning = false;
+async function runAIBackground() {
+  if (_aiBackgroundRunning) { toast('已有后台补全任务在运行', 'info'); return; }
+  const incomplete = findIncompleteEntries();
+  if (incomplete.length === 0) { toast('无需补全', 'info'); return; }
+  _aiBackgroundRunning = true;
+  closeAIModal();
+  toast(`后台补全已启动（${incomplete.length} 条），完成后会通知你`, 'info');
+  try {
+    await runAICompletionInternal(true);
+    toast(`✓ 后台补全完成（${incomplete.length} 条）`, 'success');
+  } catch (e) {
+    toast(`✗ 后台补全失败：${e.message}`, 'error');
+  } finally {
+    _aiBackgroundRunning = false;
+  }
+}
+
+// 内部补全逻辑（可前台可后台）
+async function runAICompletionInternal(background) {
+  const incomplete = findIncompleteEntries();
+  if (incomplete.length === 0) return 0;
+
+  const batchSize = 5;
+  const total = incomplete.length;
+  let totalUpdated = 0;
+
+  const logFn = background ? (() => {}) : aiLog;
+  const progFn = background ? (() => {}) : updateAIProgress;
+  if (!background) {
+    aiState.running = true;
+    aiState.cancelRequested = false;
+  }
+
+  logFn(`开始补全 ${total} 条词条，分 ${Math.ceil(total / batchSize)} 批`, 'info');
+  progFn(0, total, '初始化...');
+
+  for (let i = 0; i < total; i += batchSize) {
+    if (!background && aiState.cancelRequested) { logFn('用户已取消', 'error'); break; }
+    const batch = incomplete.slice(i, i + batchSize);
+    logFn(`第 ${Math.floor(i / batchSize) + 1} 批：${batch.map(e => e.hangul).join(', ')}`, 'info');
+    progFn(i, total, batch[0]?.hangul);
+
+    try {
+      const prompt = buildCompletionPrompt(batch);
+      const resp = await callLLM(getLLMSlot('completion'), prompt, 4096);
+      const parsed = extractJSON(resp);
+      const updated = applyCompletions(batch, parsed);
+      totalUpdated += updated;
+      logFn(`✓ 完成 ${updated}/${batch.length} 条`, 'success');
+      save();
+      if (!background) render();
+    } catch(e) {
+      logFn(`✗ 失败：${e.message}`, 'error');
+    }
+
+    if (i + batchSize < total && !(background ? false : aiState.cancelRequested)) {
+      await new Promise(r => setTimeout(r, 800));
+    }
+    progFn(Math.min(i + batchSize, total), total, '');
+  }
+
+  progFn(total, total, '完成');
+  if (!background) {
+    aiState.running = false;
+    document.getElementById('ai-cancel-btn').classList.add('hidden');
+    document.getElementById('ai-close-btn').classList.remove('hidden');
+    document.getElementById('ai-current').textContent = `✓ 完成 · 共补全 ${totalUpdated} 条词条`;
+    aiLog(`全部完成！共补全 ${totalUpdated} 条词条`, 'success');
+  }
+  return totalUpdated;
+}
+
 async function runAICompletion() {
   const incomplete = findIncompleteEntries();
-  if (incomplete.length === 0) {
-    toast('无需补全', 'info');
-    return;
-  }
+  if (incomplete.length === 0) { toast('无需补全', 'info'); return; }
 
   // Switch to progress view
   document.getElementById('ai-scan-panel').classList.add('hidden');
@@ -5641,55 +5775,7 @@ async function runAICompletion() {
   document.getElementById('ai-cancel-btn').classList.remove('hidden');
   document.getElementById('ai-log').innerHTML = '';
 
-  aiState.running = true;
-  aiState.cancelRequested = false;
-
-  const batchSize = 5;
-  const total = incomplete.length;
-  let done = 0;
-  let totalUpdated = 0;
-
-  aiLog(`开始补全 ${total} 条词条，分 ${Math.ceil(total / batchSize)} 批`, 'info');
-  updateAIProgress(0, total, '初始化...');
-
-  for (let i = 0; i < total; i += batchSize) {
-    if (aiState.cancelRequested) {
-      aiLog('用户已取消', 'error');
-      break;
-    }
-    const batch = incomplete.slice(i, i + batchSize);
-    const batchLabel = batch.map(e => e.hangul).join(', ');
-    aiLog(`第 ${Math.floor(i / batchSize) + 1} 批：${batchLabel}`, 'info');
-    updateAIProgress(i, total, batch[0]?.hangul);
-
-    try {
-      const prompt = buildCompletionPrompt(batch);
-      const resp = await callLLM(getLLMSlot('completion'), prompt, 4096);
-      const parsed = extractJSON(resp);
-      const updated = applyCompletions(batch, parsed);
-      totalUpdated += updated;
-      aiLog(`✓ 完成 ${updated}/${batch.length} 条`, 'success');
-      save();
-      render();
-    } catch(e) {
-      aiLog(`✗ 失败：${e.message}`, 'error');
-      // Continue to next batch
-    }
-
-    // Small delay between batches to avoid rate limits
-    if (i + batchSize < total && !aiState.cancelRequested) {
-      await new Promise(r => setTimeout(r, 800));
-    }
-    done = Math.min(i + batchSize, total);
-    updateAIProgress(done, total, '');
-  }
-
-  updateAIProgress(total, total, '完成');
-  aiState.running = false;
-  document.getElementById('ai-cancel-btn').classList.add('hidden');
-  document.getElementById('ai-close-btn').classList.remove('hidden');
-  document.getElementById('ai-current').textContent = `✓ 完成 · 共补全 ${totalUpdated} 条词条`;
-  aiLog(`全部完成！共补全 ${totalUpdated} 条词条`, 'success');
+  const totalUpdated = await runAICompletionInternal(false);
   toast(`AI 补全完成：${totalUpdated} 条`, 'success');
 }
 
@@ -5865,6 +5951,7 @@ window.addEventListener('scroll', () => {
 // =========================================================================
 load();
 _migrateTagPollution(state.entries, state.tagGraph);  // 一次性清理语义标签中的语法/词类污染
+_migrateIeungRoots(state.entries);  // 一次性修复ㅇ起首词的词根（无声占位符→实际音节）
 startCloudSync();   // Gist 多端同步：打开/刷新即拉取 + 切回前台
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 loadSettings();
