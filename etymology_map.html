@@ -191,6 +191,12 @@
     transform: translateY(-1px);
     margin: 1px;
   }
+  .tag-pill.selected {
+    background: rgba(52,211,153,0.2);
+    color: #6ee7b7;
+    border-color: rgba(52,211,153,0.5);
+    box-shadow: 0 0 10px rgba(52,211,153,0.2);
+  }
   .toast {
     animation: slideIn 0.3s ease-out;
   }
@@ -2224,6 +2230,12 @@ function renderWordsList() {
   const titleEl = document.getElementById('words-title');
   const countEl = document.getElementById('words-count');
 
+  // tagPills helper: render clickable tag pills with chain display
+  const tagPillsHtml = (e) => (e.tags || []).slice(0, 3).map(t => {
+    const chain = getTagChain(t) || [t];
+    return chain.map(c => `<span class="tag-pill${tagCloudState.selectedTag===c?' selected':''}" onclick="event.stopPropagation();onTagClick('${escapeHtml(c).replace(/'/g,"\\'")}', event)">${escapeHtml(c)}</span>`).join('<span style="color:var(--fg-dim);margin:0 2px;">›</span>');
+  }).join(' ');
+
   // 搜索模式：直接展示搜索命中词条（标题优先级：搜索 > 标签 > 词根 > 初声）
   if (state.filter.search.trim()) {
     const matches = getFilteredBySearch() || [];
@@ -2236,13 +2248,49 @@ function renderWordsList() {
     container.innerHTML = matches.map(e => {
       const isActive = state.selectedEntryId === e.id;
       const senses = (e.meaning || '').split(/[;；]/).map(s => s.trim()).filter(Boolean);
-      const tags = (e.tags || []).map(t => `<span class="tag-pill">${escapeHtml(t)}</span>`).join('');
+      const tags = tagPillsHtml(e);
       return `
         <div class="word-item ${isActive ? 'active' : ''} px-3 py-2.5 rounded-lg border border-white/5 fade-in" onclick="selectEntry('${e.id}')" ondblclick="dblClickEntry('${e.id}')">
           <div class="flex items-baseline justify-between mb-1 gap-2">
             <div class="flex items-baseline gap-2 min-w-0">
               <span class="text-xl font-bold text-white">${escapeHtml(e.hangul)}</span>
               <span class="text-xs text-slate-500 font-mono">${escapeHtml(e.roman || '')}</span>
+            </div>
+            <button onclick="event.stopPropagation(); playKorean('${escapeHtml(e.hangul)}')" class="tts-btn" title="朗读 ${escapeHtml(e.hangul)}" aria-label="朗读">▶</button>
+          </div>
+          <div class="text-xs text-slate-300 space-y-0.5">
+            ${senses.map(s => `<div>· ${escapeHtml(s)}</div>`).join('')}
+          </div>
+          ${tags ? `<div class="mt-1.5">${tags}</div>` : ''}
+        </div>
+      `;
+    }).join('');
+    return;
+  }
+
+  // 标签筛选模式：显示选中标签下的词条
+  if (tagCloudState.selectedTag) {
+    const tag = tagCloudState.selectedTag;
+    const allWords = getTagWordsCumulative(tag);
+    titleEl.innerHTML = `🏷 ${escapeHtml(tag)}`;
+    if (countEl) countEl.textContent = `${allWords.length} 条`;
+    if (allWords.length === 0) {
+      container.innerHTML = emptyHint('该标签下暂无词条', '在词条编辑中添加此标签');
+      return;
+    }
+    container.innerHTML = allWords.map(e => {
+      const isActive = state.selectedEntryId === e.id;
+      const senses = (e.meaning || '').split(/[;；]/).map(s => s.trim()).filter(Boolean);
+      const tags = tagPillsHtml(e);
+      const directHit = (e.tags || []).includes(tag);
+      const inheritedFrom = !directHit ? (e.tags || []).find(t => getTagSubtree(tag).includes(t)) : null;
+      return `
+        <div class="word-item ${isActive ? 'active' : ''} px-3 py-2.5 rounded-lg border border-white/5 fade-in" onclick="selectEntry('${e.id}')" ondblclick="dblClickEntry('${e.id}')">
+          <div class="flex items-baseline justify-between mb-1 gap-2">
+            <div class="flex items-baseline gap-2 min-w-0">
+              <span class="text-xl font-bold text-white">${escapeHtml(e.hangul)}</span>
+              <span class="text-xs text-slate-500 font-mono">${escapeHtml(e.roman || '')}</span>
+              ${inheritedFrom ? `<span class="text-[9px] text-[#a78bfa]">${escapeHtml(inheritedFrom)}↗</span>` : ''}
             </div>
             <button onclick="event.stopPropagation(); playKorean('${escapeHtml(e.hangul)}')" class="tts-btn" title="朗读 ${escapeHtml(e.hangul)}" aria-label="朗读">▶</button>
           </div>
@@ -2287,7 +2335,7 @@ function renderWordsList() {
   container.innerHTML = entries.map(e => {
     const isActive = state.selectedEntryId === e.id;
     const senses = (e.meaning || '').split(/[;；]/).map(s => s.trim()).filter(Boolean);
-    const tags = (e.tags || []).map(t => `<span class="tag-pill">${escapeHtml(t)}</span>`).join('');
+    const tags = tagPillsHtml(e);
     return `
       <div class="word-item ${isActive ? 'active' : ''} px-3 py-2.5 rounded-lg border border-white/5 fade-in" onclick="selectEntry('${e.id}')" ondblclick="dblClickEntry('${e.id}')">
         <div class="flex items-baseline justify-between mb-1 gap-2">
@@ -3637,7 +3685,7 @@ function selectEntryAndScroll(id) {
   }, 50);
 }
 
-// 单击 = 选中（高亮 + 展开词条列表）；Shift+点击 = 全屏
+// 单击 = 选中（高亮 + 展开词条列表 + 词条列表筛选）；Shift+点击 = 全屏
 function goToTag(tag, event) {
   if (event && event.shiftKey) {
     openTagBrowser(tag);
@@ -3658,6 +3706,8 @@ function goToTag(tag, event) {
     }
   }
   renderTagCloud();
+  renderWordsList();
+  scrollToActiveItems();
   if (tagCloudState.selectedTag) {
     setTimeout(() => {
       const pill = document.querySelector(`.tag-cloud-pill[data-tag="${CSS.escape(tag)}"]`);
@@ -3726,12 +3776,49 @@ function toggleTagExpand(tag) {
   else tagBrowserState.expanded.add(tag);
   renderTagTree();
 }
-
+function collapseAllTagTree() {
+  tagBrowserState.expanded.clear();
+  renderTagTree();
+}
 function selectTagInBrowser(tag) {
-  tagBrowserState.selectedTag = tag;
-  // 展开父链
-  getTagChain(tag).forEach(t => tagBrowserState.expanded.add(t));
+  // 已选标签再点 → 收缩（不抹除详情）
+  if (tagBrowserState.selectedTag === tag) {
+    tagBrowserState.expanded.delete(tag);
+  } else {
+    tagBrowserState.selectedTag = tag;
+    // 展开父链
+    getTagChain(tag).forEach(t => tagBrowserState.expanded.add(t));
+  }
   renderTagBrowser();
+}
+
+// 词条列表中的标签点击：筛选该标签下的词条（在主视图中）
+function onTagClick(tag, event) {
+  if (event && event.shiftKey) { openTagBrowser(tag); return; }
+  tagCloudState.selectedTag = (tagCloudState.selectedTag === tag) ? null : tag;
+  // 联动标签云：选中时展开对应根卡片 + 高亮标签
+  if (tagCloudState.selectedTag) {
+    const chain = getTagChain(tagCloudState.selectedTag);
+    chain.forEach(t => tagCloudState.expanded.add(t));
+    if (chain.length > 0) {
+      const root = chain[0];
+      if (tagCloudState.expandedRoot !== root) {
+        tagCloudState.expandedRoot = root;
+        getTagChildren(root).forEach(c => tagCloudState.expanded.add(c));
+      }
+    }
+  }
+  renderTagCloud();
+  renderWordsList();
+  if (state.selectedEntryId) renderDetail();
+  scrollToActiveItems();
+}
+
+function clearTagFilter() {
+  tagCloudState.selectedTag = null;
+  renderTagCloud();
+  renderWordsList();
+  scrollToActiveItems();
 }
 
 function renderTagDetail() {
