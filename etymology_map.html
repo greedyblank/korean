@@ -2174,12 +2174,51 @@ function renderRootsList() {
   }
 
   if (state.filter.initialIdx === null) {
-    titleEl.textContent = '词根列表';
-    countEl.textContent = '';
-    container.innerHTML = emptyHint(
-      '选择一个初声开始',
-      '点击上方任意初声按钮，查看其下所有词根'
-    );
+    // 默认展示全部：所有初声下的所有词根，按初声分组
+    const allRoots = new Map();  // root -> { count, initialIdx }
+    state.entries.forEach(e => {
+      const r = e.root || getDefaultRoot(e.hangul);
+      const idx = getInitialIdx(e.hangul);
+      if (idx === null) return;
+      if (!allRoots.has(r)) allRoots.set(r, { count: 0, initialIdx: idx });
+      allRoots.get(r).count++;
+    });
+    // 按初声分组
+    const grouped = {};
+    allRoots.forEach((info, root) => {
+      const idx = info.initialIdx;
+      if (!grouped[idx]) grouped[idx] = [];
+      grouped[idx].push({ root, count: info.count });
+    });
+    let html = '';
+    Object.keys(grouped).sort((a, b) => Number(a) - Number(b)).forEach(idx => {
+      const init = INITIALS[Number(idx)];
+      const rootsInGroup = grouped[idx];
+      html += `<div style="font-size:10px;color:var(--fg-muted);padding:8px 10px 4px;display:flex;align-items:center;gap:5px;border-radius:6px;background:rgba(255,255,255,0.02);margin-bottom:2px;cursor:pointer;" onclick="event.stopPropagation();selectInitial(${idx})" onmouseover="this.style.background='rgba(255,255,255,0.04)'" onmouseout="this.style.background='rgba(255,255,255,0.02)'">
+        <span class="text-lg font-bold" style="color:var(--accent);min-width:20px;">${init.char}</span>
+        <span style="font-size:13px;">${init.roman || ''}</span>
+        <span style="font-size:10px;color:var(--fg-dim);">${rootsInGroup.length} 词根</span>
+      </div>`;
+      rootsInGroup.forEach(({ root, count }) => {
+        const isActive = state.highlightRoot === root;
+        const roman = romanizeHangul(root);
+        const safeRoot = escapeHtml(root).replace(/'/g, "\\'");
+        html += `
+          <div class="root-item ${isActive ? 'active' : ''} px-3 py-2 rounded-lg" onclick="selectRoot('${safeRoot}')" ondblclick="dblClickRoot('${safeRoot}')">
+            <div class="flex items-baseline justify-between gap-2">
+              <div class="flex items-baseline gap-2 min-w-0">
+                <span class="text-xl font-bold text-white">${escapeHtml(root)}</span>
+                ${roman ? `<span class="text-[10px] text-slate-500 font-mono">/${escapeHtml(roman)}/</span>` : ''}
+              </div>
+              <span class="text-xs text-slate-500">${count}</span>
+            </div>
+          </div>
+        `;
+      });
+    });
+    titleEl.textContent = '全部词根';
+    countEl.textContent = `${allRoots.size} 个`;
+    container.innerHTML = html || emptyHint('暂无词条', '点击右上角"+"添加新词');
     return;
   }
 
@@ -2304,16 +2343,85 @@ function renderWordsList() {
     return;
   }
 
-  if (state.filter.initialIdx === null) {
-    titleEl.textContent = '词条';
-    if (countEl) countEl.textContent = '';
-    container.innerHTML = emptyHint('← 请先选择初声', '然后选择词根');
+  if (state.filter.initialIdx === null && !state.filter.root) {
+    // 默认展示全部词条
+    const allEntries = state.entries.slice().sort((a, b) => {
+      if (sortMode === 'roman') {
+        const ar = a.roman || romanizeHangul(a.hangul || '');
+        const br = b.roman || romanizeHangul(b.hangul || '');
+        return ar.localeCompare(br, 'en');
+      }
+      return (a.hangul || '').localeCompare(b.hangul || '', 'ko');
+    });
+    titleEl.textContent = '全部词条';
+    if (countEl) countEl.textContent = `${allEntries.length} 条`;
+    if (allEntries.length === 0) {
+      container.innerHTML = emptyHint('暂无词条', '点击右上角"+"添加新词');
+      return;
+    }
+    container.innerHTML = allEntries.map(e => {
+      const isActive = state.selectedEntryId === e.id;
+      const senses = (e.meaning || '').split(/[;；]/).map(s => s.trim()).filter(Boolean);
+      const tags = tagPillsHtml(e);
+      return `
+        <div class="word-item ${isActive ? 'active' : ''} px-3 py-2.5 rounded-lg border border-white/5 fade-in" onclick="selectEntry('${e.id}')" ondblclick="dblClickEntry('${e.id}')">
+          <div class="flex items-baseline justify-between mb-1 gap-2">
+            <div class="flex items-baseline gap-2 min-w-0">
+              <span class="text-xl font-bold text-white">${escapeHtml(e.hangul)}</span>
+              <span class="text-xs text-slate-500 font-mono">${escapeHtml(e.roman || '')}</span>
+            </div>
+            <button onclick="event.stopPropagation(); playKorean('${escapeHtml(e.hangul)}')" class="tts-btn" title="朗读 ${escapeHtml(e.hangul)}" aria-label="朗读">▶</button>
+          </div>
+          <div class="text-xs text-slate-300 space-y-0.5">
+            ${senses.map(s => `<div>· ${escapeHtml(s)}</div>`).join('')}
+          </div>
+          ${tags ? `<div class="mt-1.5">${tags}</div>` : ''}
+        </div>
+      `;
+    }).join('');
     return;
   }
-  if (!state.filter.root) {
-    titleEl.textContent = '词条';
-    if (countEl) countEl.textContent = '';
-    container.innerHTML = emptyHint('← 请先选择词根', '查看该词根下的所有词');
+
+  if (state.filter.initialIdx !== null && !state.filter.root) {
+    // 选了初声但没选词根：显示该初声下所有词条
+    const entries = state.entries.filter(e => {
+      if (getInitialIdx(e.hangul) !== state.filter.initialIdx) return false;
+      return passesVowelFilter(e);
+    }).sort((a, b) => {
+      if (sortMode === 'roman') {
+        const ar = a.roman || romanizeHangul(a.hangul || '');
+        const br = b.roman || romanizeHangul(b.hangul || '');
+        return ar.localeCompare(br, 'en');
+      }
+      return (a.hangul || '').localeCompare(b.hangul || '', 'ko');
+    });
+    const init = INITIALS[state.filter.initialIdx];
+    titleEl.innerHTML = `<span class="text-[#38bdf8] text-lg font-bold">${init.char}</span><span class="text-slate-400 text-xs ml-1">下全部词条</span>`;
+    if (countEl) countEl.textContent = `${entries.length} 条`;
+    if (entries.length === 0) {
+      container.innerHTML = emptyHint('暂无词条', '点击右上角"+ 添加到此词根"');
+      return;
+    }
+    container.innerHTML = entries.map(e => {
+      const isActive = state.selectedEntryId === e.id;
+      const senses = (e.meaning || '').split(/[;；]/).map(s => s.trim()).filter(Boolean);
+      const tags = tagPillsHtml(e);
+      return `
+        <div class="word-item ${isActive ? 'active' : ''} px-3 py-2.5 rounded-lg border border-white/5 fade-in" onclick="selectEntry('${e.id}')" ondblclick="dblClickEntry('${e.id}')">
+          <div class="flex items-baseline justify-between mb-1 gap-2">
+            <div class="flex items-baseline gap-2 min-w-0">
+              <span class="text-xl font-bold text-white">${escapeHtml(e.hangul)}</span>
+              <span class="text-xs text-slate-500 font-mono">${escapeHtml(e.roman || '')}</span>
+            </div>
+            <button onclick="event.stopPropagation(); playKorean('${escapeHtml(e.hangul)}')" class="tts-btn" title="朗读 ${escapeHtml(e.hangul)}" aria-label="朗读">▶</button>
+          </div>
+          <div class="text-xs text-slate-300 space-y-0.5">
+            ${senses.map(s => `<div>· ${escapeHtml(s)}</div>`).join('')}
+          </div>
+          ${tags ? `<div class="mt-1.5">${tags}</div>` : ''}
+        </div>
+      `;
+    }).join('');
     return;
   }
 
@@ -2611,6 +2719,14 @@ function cascadeToFirstRootAndEntry() {
 }
 
 function selectRoot(root) {
+  // 如果还没选初声，从该词根的第一个词条推导初声
+  if (state.filter.initialIdx === null) {
+    const firstEntry = state.entries.find(e => (e.root || getDefaultRoot(e.hangul)) === root);
+    if (firstEntry) {
+      const idx = getInitialIdx(firstEntry.hangul);
+      if (idx !== null) state.filter.initialIdx = idx;
+    }
+  }
   state.filter.root = root;
   state.highlightRoot = root;
   state.highlightLayer = null;
