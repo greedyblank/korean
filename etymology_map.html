@@ -347,10 +347,6 @@
         </h3>
         <div class="flex items-center gap-1.5">
           <span id="roots-count" class="text-xs text-slate-500"></span>
-          <button onclick="toggleSortMode()" class="sort-toggle-btn w-7 h-7 flex items-center justify-center text-xs rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-400 hover:text-slate-200 transition font-mono" title="排序方式（点击切换）">
-            <span class="sort-label">가</span>
-          </button>
-          <button onclick="quickAddForInitial()" class="text-xs text-[#7dd3fc] hover:text-[#38bdf8] transition px-1.5 py-0.5 rounded border border-[#38bdf8]/20 hover:border-[#38bdf8]/40 hover:bg-[#38bdf8]/10" title="为当前初声添加新词">+</button>
         </div>
       </div>
       <div id="roots-list" class="space-y-1 overflow-y-auto flex-1 max-h-[70vh]"></div>
@@ -363,12 +359,6 @@
           <span id="words-title">词条</span>
           <span id="words-count" class="text-xs text-slate-500 ml-1"></span>
         </h3>
-        <div class="flex items-center gap-1.5">
-          <button onclick="toggleSortMode()" class="sort-toggle-btn w-7 h-7 flex items-center justify-center text-xs rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-400 hover:text-slate-200 transition font-mono" title="排序方式（点击切换）">
-            <span class="sort-label">가</span>
-          </button>
-          <button onclick="quickAddForCurrentRoot()" class="text-xs text-[#7dd3fc] hover:text-[#38bdf8] transition">+ 添加到此词根</button>
-        </div>
       </div>
       <div id="words-list" class="space-y-2 overflow-y-auto flex-1 max-h-[70vh]"></div>
     </div>
@@ -1584,6 +1574,58 @@ function load() {
 }
 
 // =========================================================================
+// 标签净化：语法/词类标签不应混入语义标签系统
+// =========================================================================
+// 这些是词法/语法属性，应该用专用字段（pos/wordClass/speechLevel 等），不是语义标签
+const _GRAMMAR_POLLUTION_TAGS = new Set([
+  '名词','动词','形容词','副词','代词','数词','依存名词','冠形词','感叹词','助词','接缀',
+  '体词','用言','修饰语','独立语','关系语',
+  '汉音词','固有词','外来词','混种词','汉字词','韩语词',
+  '敬语','谦语','卑称','尊称','书面语','口语','俗语','雅语',
+  '自动词','他动词','中性词','能动词','被动词','使动词',
+  '规则','不规则','르不规则','ㄷ不规则','ㅂ不规则','ㅅ不规则','ㅎ不规则','으不规则',
+  '拟声词','拟态词','感叹词',
+]);
+
+function _migrateTagPollution(entries, tagGraph) {
+  if (localStorage.getItem('korean_tag_cleanup_v1')) return;  // 只跑一次
+  let cleaned = 0;
+  entries.forEach(e => {
+    if (!e.tags || !e.tags.length) return;
+    const before = e.tags.length;
+    e.tags = e.tags.filter(t => {
+      // 保留非污染标签 + 含 › (父链标签)
+      if (_GRAMMAR_POLLUTION_TAGS.has(t) && !t.includes('›')) {
+        // 尝试迁移到专用字段
+        if (['名词','动词','形容词','副词','代词','数词','依存名词','冠形词','感叹词','助词','接缀'].includes(t) && !e.pos) {
+          e.pos = t;
+        }
+        if (['汉音词','固有词','外来词','混种词','汉字词'].includes(t)) {
+          // 没有专用字段则丢弃（语义系统不应承载词源信息）
+        }
+        if (['敬语','尊称'].includes(t) && !e.speechLevel) e.speechLevel = t;
+        if (['书面语','口语','俗语','雅语'].includes(t) && !e.register) e.register = t;
+        return false;
+      }
+      return true;
+    });
+    if (e.tags.length < before) cleaned++;
+  });
+  // 同时清理 tagGraph 中的污染标签
+  Object.keys(tagGraph).forEach(t => {
+    if (_GRAMMAR_POLLUTION_TAGS.has(t)) delete tagGraph[t];
+  });
+  if (cleaned > 0) {
+    localStorage.setItem('korean_tag_cleanup_v1', '1');
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+    localStorage.setItem(TAGGRAPH_KEY, JSON.stringify(tagGraph));
+    console.log(`[标签净化] 清理了 ${cleaned} 个词条，移除语法/词类标签`);
+  } else {
+    localStorage.setItem('korean_tag_cleanup_v1', '1');
+  }
+}
+
+// =========================================================================
 // TAG GRAPH · 标签图（带父链的多根树）
 //   tagGraph[tagId] = { parent: string|null, aliases: [string], related: [string] }
 //   词条仍然挂扁平 tags:[]，标签图只是关于标签的元数据
@@ -2134,16 +2176,15 @@ function renderInitialGrid() {
   grid.innerHTML = html;
 }
 
-// 按当前排序模式排列词根数组
-function sortRoots(rootsArr) {
-  return rootsArr.sort((a, b) => {
-    const ra = a.root || a[0] || '';
-    const rb = b.root || b[0] || '';
-    if (sortMode === 'roman') {
-      return romanizeHangul(ra).localeCompare(romanizeHangul(rb), 'en');
-    }
-    return ra.localeCompare(rb, 'ko');
-  });
+// 初声按五音顺序排列：牙→舌→唇→齿→喉→元音
+const _WUYIN_ORDER = (() => {
+  const order = {};
+  // 牙音: ㄱ(0) ㄲ(1) ㅋ(15) → 舌音 → 唇音 → 齿音 → 喉音 → 元音(ㅇ=11)
+  [0,1,15, 2,3,4,5,16, 6,7,8,17, 9,10,12,13,14, 18, 11].forEach((idx, i) => { order[idx] = i; });
+  return order;
+})();
+function sortInitialKeys(keys) {
+  return keys.sort((a, b) => (_WUYIN_ORDER[Number(a)] ?? 99) - (_WUYIN_ORDER[Number(b)] ?? 99));
 }
 
 function renderRootsList() {
@@ -2152,13 +2193,14 @@ function renderRootsList() {
   const countEl = document.getElementById('roots-count');
   const backBtn = document.getElementById('back-to-all-btn');
 
-  // 分组标题 HTML（带发音标注：ㄱ (g)）
+  // 分组标题 HTML：ㄱ (g) · 舌根收紧·阻断截断
   const groupHeaderHtml = (init, count, onClick) => {
     const pron = init.roman ? ` (${init.roman})` : '';
+    const core = init.core ? ` · ${init.core}` : '';
     return `<div style="font-size:10px;color:var(--fg-muted);padding:8px 10px 4px;display:flex;align-items:center;gap:5px;border-radius:6px;background:rgba(255,255,255,0.02);margin-bottom:2px;cursor:pointer;" onclick="${onClick}" onmouseover="this.style.background='rgba(255,255,255,0.04)'" onmouseout="this.style.background='rgba(255,255,255,0.02)'">
       <span class="text-lg font-bold" style="color:var(--accent);min-width:20px;">${init.char}</span>
       <span style="font-size:11px;color:var(--fg-dim);">${init.roman || ''}</span>
-      <span style="font-size:10px;color:var(--fg-dim);">${count} 词根</span>
+      <span style="font-size:10px;color:var(--fg-dim);">${count} 词根${core}</span>
     </div>`;
   };
 
@@ -2206,9 +2248,9 @@ function renderRootsList() {
       grouped[idx].push({ root, count: info.count });
     });
     let html = '';
-    Object.keys(grouped).sort((a, b) => Number(a) - Number(b)).forEach(idx => {
+    sortInitialKeys(Object.keys(grouped)).forEach(idx => {
       const init = INITIALS[Number(idx)];
-      const rootsInGroup = sortRoots(grouped[idx]);
+      const rootsInGroup = grouped[idx];
       html += groupHeaderHtml(init, rootsInGroup.length, `event.stopPropagation();selectInitial(${idx})`);
       rootsInGroup.forEach(({ root, count }) => {
         html += rootItemHtml(root, count, state.highlightRoot === root);
@@ -2236,9 +2278,9 @@ function renderRootsList() {
       grouped[idx].push({ root, count: info.count });
     });
     let html = '';
-    Object.keys(grouped).sort((a, b) => Number(a) - Number(b)).forEach(idx => {
+    sortInitialKeys(Object.keys(grouped)).forEach(idx => {
       const init = INITIALS[Number(idx)];
-      const rootsInGroup = sortRoots(grouped[idx]);
+      const rootsInGroup = grouped[idx];
       html += groupHeaderHtml(init, rootsInGroup.length, `event.stopPropagation();selectInitial(${idx})`);
       rootsInGroup.forEach(({ root, count }) => {
         html += rootItemHtml(root, count, state.highlightRoot === root);
@@ -2730,7 +2772,10 @@ function backToAll() {
 function dblClickRoot(root) {
   state.highlightRoot = root;
   state.highlightLayer = null;
-  const entries = getEntriesForRoot(state.filter.initialIdx, root);
+  // 如果未选初声，从该词根的第一条词条推导初声
+  const idx = state.filter.initialIdx !== null ? state.filter.initialIdx
+    : (() => { const e = state.entries.find(e => (e.root || getDefaultRoot(e.hangul)) === root); return e ? getInitialIdx(e.hangul) : null; })();
+  const entries = getEntriesForRoot(idx, root);
   state.selectedEntryId = entries.length > 0 ? entries[0].id : null;
   renderRootsList();
   renderWordsList();
@@ -2798,7 +2843,10 @@ function clearAllFilters() {
   state.highlightLayer = null;
   tagCloudState.selectedTag = null;
   document.getElementById('search-clear').classList.add('hidden');
+  const backBtn = document.getElementById('back-to-all-btn');
+  if (backBtn) backBtn.style.display = 'none';
   render();
+  renderTagCloud();
   scrollToActiveItems();
 }
 function scrollToActiveItems() {
@@ -3137,7 +3185,7 @@ function buildAIEntryPrompt(input, existingTags) {
 - honNoun: 布尔。是否为敬语名词变体（如 집→댁、이름→성함、나이→연세、말→말씀、밥→진지、사람→분）。与 honorific 是不同维度。
 
 **字段适用性总原则：只填适用字段，不适用的留空/ false。一个名词通常不会有 speechLevel/irregular；一个动词通常不会有 animacy/honNoun。**
-- tags: 1-3 个标签，描述语义/语法类别。
+- tags: 1-3 个**语义**标签（禁止填词性/语种/阶称/敬语等语法标签——这些有专用字段 pos/wordClass/speechLevel/honorific/humble/register）。语义标签描述「含义属于哪个概念领域」：身体部位、情感、饮食、自然现象、社会关系、抽象关系、动作行为等。优先复用现有标签。
 ${tagHint}
 【造物主矩阵参考框架（矩阵可能拆分过细了，实际解读词汇时可能不需要太细）】
 
@@ -5175,6 +5223,8 @@ ${rootsList}
 5. 标签名带 · 分隔的复合标签（如「烹饪·蒸」），按**第一义**归到对应根
 6. 同义词（如「烹饪/料理/做饭」）挑一个作 canonical，其余放 aliases
 7. 学习管理类随手标签（TODO/重要/复习）挂到「教育·学习·知识」下，不要单独立根
+8. **禁止语法类标签**：词性（名词/动词/形容词/副词/代词/数词/依存名词/冠形词/感叹词/助词/接缀）、语种（汉音词/固有词/外来词/混种词）、阶称（敬语/谦语/卑称/书面语/口语）、活用类型（规则/르不规则/ㄷ不规则/ㅂ不规则）等**不是语义标签**，应从输入中过滤掉（不要出现在 tagGraph 中）
+9. **禁止重复子标签**：同一 parent 下的所有 children 必须互异（不能有同名子标签）。如同一概念有多个叫法，用一个作 canonical，其余放 aliases
 
 【输出必须包含 processedTags 数组】
 在 tagGraph 同级额外输出 processedTags 数组，**逐字列出你已处理的所有输入标签名**，便于客户端比对补漏。即使你合并了某标签为 alias，也要在 processedTags 中列出原始输入名。
@@ -5338,8 +5388,14 @@ function showTagRestructurePreview(rawGraph) {
     if (!newGraph[r]) newGraph[r] = { parent: null, aliases: [], related: [] };
   });
 
-  // 5) 漏掉的输入标签 → 也挂到最贴近的根（不用「其他」万能桶）
-  const missing = inputTags.filter(t => !newGraph[t]);
+  // 5) 过滤语法污染标签（不应出现在语义标签系统中）
+  const grammarTagsRemoved = [];
+  Object.keys(newGraph).forEach(t => {
+    if (_GRAMMAR_POLLUTION_TAGS.has(t)) { delete newGraph[t]; grammarTagsRemoved.push(t); }
+  });
+
+  // 6) 漏掉的输入标签 → 先过滤语法污染，再挂到最贴近的根
+  const missing = inputTags.filter(t => !newGraph[t] && !_GRAMMAR_POLLUTION_TAGS.has(t));
   if (missing.length > 0) {
     missing.forEach(t => {
       // 复用上面的根匹配逻辑：先空 parent，让下一轮循环归类
@@ -5373,7 +5429,7 @@ function showTagRestructurePreview(rawGraph) {
     });
   }
 
-  // 6) 把 aliases 里的标签补条目（指向 canonical）
+  // 7) 把 aliases 里的标签补条目（指向 canonical）
   Object.entries(newGraph).forEach(([canonical, node]) => {
     (node.aliases || []).forEach(a => {
       if (!newGraph[a]) {
@@ -5808,6 +5864,7 @@ window.addEventListener('scroll', () => {
 // INIT
 // =========================================================================
 load();
+_migrateTagPollution(state.entries, state.tagGraph);  // 一次性清理语义标签中的语法/词类污染
 startCloudSync();   // Gist 多端同步：打开/刷新即拉取 + 切回前台
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 loadSettings();
