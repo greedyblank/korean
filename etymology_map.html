@@ -2438,7 +2438,7 @@ function renderRootsList() {
       <div class="root-item ${isActive ? 'active' : ''} px-3 py-2 rounded-lg" onclick="selectRoot('${safeRoot}')" ondblclick="dblClickRoot('${safeRoot}')">
         <div class="flex items-baseline justify-between gap-2">
           <div class="flex items-baseline gap-2 min-w-0">
-            <span class="text-xl font-bold text-white">${escapeHtml(root)}</span>
+            <span class="text-base font-bold text-white">${escapeHtml(root)}</span>
             ${roman ? `<span class="text-[10px] text-slate-500 font-mono">${escapeHtml(roman)}</span>` : ''}
           </div>
           <div class="flex items-center gap-1 shrink-0">
@@ -2570,13 +2570,13 @@ function renderWordsList() {
         <div class="word-item ${isActive ? 'active' : ''} px-3 py-2.5 rounded-lg border border-white/5 fade-in" onclick="selectEntry('${e.id}')" ondblclick="dblClickEntry('${e.id}')">
           <div class="flex items-baseline justify-between mb-1 gap-2">
             <div class="flex items-baseline gap-2 min-w-0">
-              <span class="text-xl font-bold text-white">${escapeHtml(e.hangul)}</span>
-              <span class="text-xs text-slate-500 font-mono">${escapeHtml(e.roman || '')}</span>
+              <span class="text-base font-bold text-white">${escapeHtml(e.hangul)}</span>
+              <span class="text-[10px] text-slate-500 font-mono">${escapeHtml(e.roman || '')}</span>
               ${wordBadgesHtml(e)}
             </div>
             <button onclick="event.stopPropagation(); playKorean('${escapeHtml(e.hangul)}')" class="tts-btn" title="朗读 ${escapeHtml(e.hangul)}" aria-label="朗读">▶</button>
           </div>
-          <div class="text-xs text-slate-300">
+          <div class="text-[11px] text-slate-300">
             · ${escapeHtml((e.meaning || '').trim())}
           </div>
           ${tags ? `<div class="mt-1.5">${tags}</div>` : ''}
@@ -2606,14 +2606,14 @@ function renderWordsList() {
         <div class="word-item ${isActive ? 'active' : ''} px-3 py-2.5 rounded-lg border border-white/5 fade-in" onclick="selectEntry('${e.id}')" ondblclick="dblClickEntry('${e.id}')">
           <div class="flex items-baseline justify-between mb-1 gap-2">
             <div class="flex items-baseline gap-2 min-w-0">
-              <span class="text-xl font-bold text-white">${escapeHtml(e.hangul)}</span>
-              <span class="text-xs text-slate-500 font-mono">${escapeHtml(e.roman || '')}</span>
+              <span class="text-base font-bold text-white">${escapeHtml(e.hangul)}</span>
+              <span class="text-[10px] text-slate-500 font-mono">${escapeHtml(e.roman || '')}</span>
               ${wordBadgesHtml(e)}
               ${inheritedFrom ? `<span class="text-[9px] text-[#a78bfa]">${escapeHtml(inheritedFrom)}↗</span>` : ''}
             </div>
             <button onclick="event.stopPropagation(); playKorean('${escapeHtml(e.hangul)}')" class="tts-btn" title="朗读 ${escapeHtml(e.hangul)}" aria-label="朗读">▶</button>
           </div>
-          <div class="text-xs text-slate-300">
+          <div class="text-[11px] text-slate-300">
             · ${escapeHtml((e.meaning || '').trim())}
           </div>
           ${tags ? `<div class="mt-1.5">${tags}</div>` : ''}
@@ -2647,13 +2647,13 @@ function renderWordsList() {
         <div class="word-item ${isActive ? 'active' : ''} px-3 py-2.5 rounded-lg border border-white/5 fade-in" onclick="selectEntry('${e.id}')" ondblclick="dblClickEntry('${e.id}')">
           <div class="flex items-baseline justify-between mb-1 gap-2">
             <div class="flex items-baseline gap-2 min-w-0">
-              <span class="text-xl font-bold text-white">${escapeHtml(e.hangul)}</span>
-              <span class="text-xs text-slate-500 font-mono">${escapeHtml(e.roman || '')}</span>
+              <span class="text-base font-bold text-white">${escapeHtml(e.hangul)}</span>
+              <span class="text-[10px] text-slate-500 font-mono">${escapeHtml(e.roman || '')}</span>
               ${wordBadgesHtml(e)}
             </div>
             <button onclick="event.stopPropagation(); playKorean('${escapeHtml(e.hangul)}')" class="tts-btn" title="朗读 ${escapeHtml(e.hangul)}" aria-label="朗读">▶</button>
           </div>
-          <div class="text-xs text-slate-300">
+          <div class="text-[11px] text-slate-300">
             · ${escapeHtml((e.meaning || '').trim())}
           </div>
           ${tags ? `<div class="mt-1.5">${tags}</div>` : ''}
@@ -2691,13 +2691,13 @@ function renderWordsList() {
         <div class="word-item ${isActive ? 'active' : ''} px-3 py-2.5 rounded-lg border border-white/5 fade-in" onclick="selectEntry('${e.id}')" ondblclick="dblClickEntry('${e.id}')">
           <div class="flex items-baseline justify-between mb-1 gap-2">
             <div class="flex items-baseline gap-2 min-w-0">
-              <span class="text-xl font-bold text-white">${escapeHtml(e.hangul)}</span>
-              <span class="text-xs text-slate-500 font-mono">${escapeHtml(e.roman || '')}</span>
+              <span class="text-base font-bold text-white">${escapeHtml(e.hangul)}</span>
+              <span class="text-[10px] text-slate-500 font-mono">${escapeHtml(e.roman || '')}</span>
               ${wordBadgesHtml(e)}
             </div>
             <button onclick="event.stopPropagation(); playKorean('${escapeHtml(e.hangul)}')" class="tts-btn" title="朗读 ${escapeHtml(e.hangul)}" aria-label="朗读">▶</button>
           </div>
-          <div class="text-xs text-slate-300">
+          <div class="text-[11px] text-slate-300">
             · ${escapeHtml((e.meaning || '').trim())}
           </div>
           ${tags ? `<div class="mt-1.5">${tags}</div>` : ''}
@@ -2757,6 +2757,7 @@ function renderDetail() {
           ${e.pos ? `<span class="inline-block px-1.5 py-0.5 rounded-full text-[10px] ${posBadgeClass(e.pos)}">${escapeHtml(e.pos)}</span>` : ''}
           ${(e.wordClass || e.hanja) ? `<span class="inline-block px-1.5 py-0.5 rounded-full text-[10px] bg-[#a855f7]/15 text-[#d8b4fe] border border-[#a855f7]/30${e.hanja?' font-serif':''}">${e.wordClass ? (e.hanja ? escapeHtml(e.wordClass) + '：' + escapeHtml(e.hanja) : escapeHtml(e.wordClass)) : escapeHtml(e.hanja)}</span>` : ''}
           <div class="flex gap-1 ml-auto shrink-0">
+            <button onclick="openAIModal('${e.id}')" class="px-2 py-1 text-[10px] rounded-md bg-gradient-to-r from-[#a855f7]/20 to-[#ec4899]/20 hover:from-[#a855f7]/30 hover:to-[#ec4899]/30 border border-[#a855f7]/40 text-[#d8b4fe] transition" title="只补全这一个词条">✨ AI补全</button>
             <button onclick="editEntry('${e.id}')" class="px-2 py-1 text-[10px] rounded-md bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 transition">✎ 编辑</button>
             <button onclick="deleteEntry('${e.id}')" class="px-2 py-1 text-[10px] rounded-md bg-[#f43f5e]/10 hover:bg-[#f43f5e]/25 border border-[#f43f5e]/30 text-[#fda4af] transition">✕ 删除</button>
           </div>
@@ -5048,6 +5049,13 @@ function buildPhoneticReference() {
 
 function findIncompleteEntries() {
   const fields = completionConfig.fields;
+  // 单词条补全模式：只处理这一个词条
+  if (_singleEntryId) {
+    const e = state.entries.find(x => x.id === _singleEntryId);
+    if (!e) return [];
+    if (!completionConfig.onlyIfEmpty) return [e];
+    return fields.some(f => isFieldEmpty(e, f)) ? [e] : [];
+  }
   // 未勾选「仅填空字段」= 覆盖模式，所有词条都参与补全
   if (!completionConfig.onlyIfEmpty) return state.entries.slice();
   return state.entries.filter(e => fields.some(f => isFieldEmpty(e, f)));
@@ -5303,16 +5311,21 @@ function refreshAIScanResult() {
   const incomplete = findIncompleteEntries();
   const panel = document.getElementById('ai-scan-result');
   const runBtn = document.getElementById('ai-run-btn');
+  // 单词条补全模式横幅
+  const singleBanner = _singleEntryId ? (() => {
+    const e = state.entries.find(x => x.id === _singleEntryId);
+    return e ? `<div class="mb-3 px-3 py-2 rounded-lg bg-[#a855f7]/10 border border-[#a855f7]/30 text-xs text-[#d8b4fe]">🎯 单词条补全：<span class="font-bold text-white">${escapeHtml(e.hangul)}</span> ${e.meaning ? '· ' + escapeHtml((e.meaning||'').slice(0,20)) : ''}</div>` : '';
+  })() : '';
   if (completionConfig.fields.length === 0) {
-    panel.innerHTML = `<div class="text-center py-4 text-xs text-[#fbbf24]">⚠ 请至少选择一个补全字段</div>`;
+    panel.innerHTML = singleBanner + `<div class="text-center py-4 text-xs text-[#fbbf24]">⚠ 请至少选择一个补全字段</div>`;
     runBtn.disabled = true;
     runBtn.classList.add('opacity-50', 'cursor-not-allowed');
     return;
   }
   if (incomplete.length === 0) {
-    panel.innerHTML = `<div class="text-center py-6">
+    panel.innerHTML = singleBanner + `<div class="text-center py-6">
       <div class="text-3xl mb-2">✓</div>
-      <p class="text-[#6ee7b7]">所有 ${state.entries.length} 条词条在所选字段上均已完整，无需补全。</p>
+      <p class="text-[#6ee7b7]">${_singleEntryId ? '该词条在所选字段上均已完整，无需补全。' : `所有 ${state.entries.length} 条词条在所选字段上均已完整，无需补全。`}</p>
       <p class="text-xs text-slate-500 mt-1">提示：取消「仅填空字段」可强制覆盖重补。</p>
     </div>`;
     runBtn.disabled = true;
@@ -5325,10 +5338,10 @@ function refreshAIScanResult() {
     }
     const top5 = Object.entries(missByField).sort((a,b) => b[1] - a[1]).slice(0, 6);
     const batches = Math.ceil(incomplete.length / 5);
-    panel.innerHTML = `
+    panel.innerHTML = singleBanner + `
       <div class="bg-white/[0.03] border border-white/10 rounded-lg p-4">
-        <div class="text-base text-white mb-2">扫描完成：${incomplete.length} / ${state.entries.length} 条需补全</div>
-        <div class="text-xs text-slate-400 mb-2">预计分 <span class="text-[#d8b4fe] font-semibold">${batches}</span> 批 · 每批 5 条</div>
+        <div class="text-base text-white mb-2">${_singleEntryId ? '该词条' : `扫描完成：${incomplete.length} / ${state.entries.length} 条需补全`}</div>
+        <div class="text-xs text-slate-400 mb-2">${_singleEntryId ? '' : `预计分 <span class="text-[#d8b4fe] font-semibold">${batches}</span> 批 · 每批 5 条`}</div>
         <div class="flex flex-wrap gap-2 mt-2">
           ${top5.map(([f, n]) => `<span class="text-[10px] px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-slate-300">${COMPLETION_FIELD_META[f]?.label || f}: <span class="text-[#fbbf24]">${n}</span></span>`).join('')}
         </div>
@@ -5339,7 +5352,9 @@ function refreshAIScanResult() {
   }
 }
 
-function openAIModal() {
+let _singleEntryId = null;  // 单词条补全模式（点详情卡片 AI补全 时设置）
+function openAIModal(entryId) {
+  _singleEntryId = entryId || null;
   const completionLLM = getLLMSlot('completion');
   if (!completionLLM.apiKey) {
     toast('请先在 ⚙ 设置中填写「补全 LLM」的 API Key', 'error');
@@ -6085,10 +6100,13 @@ async function runAICompletion() {
   try {
     const totalUpdated = await runAICompletionInternal(false);
     toast(`AI 补全完成：${totalUpdated} 条`, 'success');
+    // 单词条补全完成后刷新详情
+    if (_singleEntryId) { renderDetail(); renderWordsList(); }
   } catch(e) {
     toast(`AI 补全失败：${e.message}`, 'error');
   } finally {
     _aiBackgroundRunning = false;  // 后台/前台任务都结束时复位
+    _singleEntryId = null;  // 复位单词条模式（下次打开默认批量）
   }
 }
 
