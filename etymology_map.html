@@ -1625,6 +1625,37 @@ function _tagTaxonomyText() {
     `   ${i+1}. ${root}：${subs.slice(0,5).join('/')}`
   ).join('\n');
 }
+
+// 摄入标签：解析「一级大类 > 二级子类 [> 叶子]」格式，
+// 在 tagGraph 中自动建立父子链，返回叶子名用于挂到 entry.tags
+function _ingestTag(rawTag) {
+  if (!rawTag) return null;
+  const parts = String(rawTag).split(/>|›/).map(s => s.trim()).filter(Boolean);
+  if (parts.length === 0) return null;
+  const g = state.tagGraph || (state.tagGraph = {});
+  if (parts.length >= 2) {
+    // 建链：root → (mid?) → leaf
+    const root = parts[0];
+    if (!g[root]) g[root] = { parent: null, aliases: [], related: [] };
+    let parent = root;
+    for (let i = 1; i < parts.length; i++) {
+      const node = parts[i];
+      if (!g[node]) g[node] = { parent, aliases: [], related: [] };
+      else if (!g[node].parent) g[node].parent = parent;
+      parent = node;
+    }
+    return parts[parts.length - 1];  // 叶子
+  }
+  // 单独叶子：用 router 自动归大类并建链
+  const leaf = parts[0];
+  const root = _routeTagToRoot(leaf);
+  if (root) {
+    if (!g[root]) g[root] = { parent: null, aliases: [], related: [] };
+    if (!g[leaf]) g[leaf] = { parent: root, aliases: [], related: [] };
+    else if (!g[leaf].parent) g[leaf].parent = root;
+  }
+  return leaf;
+}
 const _TAG_ROOT_ROUTER = [
   ['身体·健康·医疗', /身|体|医|病|痛|头|手|脚|眼|脸|发|健康|医疗|药|症状|生理|呼吸|消化/],
   ['情感·心理·性格', /情|感|怒|喜|悲|爱|恨|心理|性格|情绪|心态|惊|惧|忧|乐/],
@@ -2536,8 +2567,8 @@ function renderWordsList() {
             </div>
             <button onclick="event.stopPropagation(); playKorean('${escapeHtml(e.hangul)}')" class="tts-btn" title="朗读 ${escapeHtml(e.hangul)}" aria-label="朗读">▶</button>
           </div>
-          <div class="text-xs text-slate-300 space-y-0.5">
-            ${senses.map(s => `<div>· ${escapeHtml(s)}</div>`).join('')}
+          <div class="text-xs text-slate-300">
+            · ${escapeHtml((e.meaning || '').trim())}
           </div>
           ${tags ? `<div class="mt-1.5">${tags}</div>` : ''}
         </div>
@@ -2572,8 +2603,8 @@ function renderWordsList() {
             </div>
             <button onclick="event.stopPropagation(); playKorean('${escapeHtml(e.hangul)}')" class="tts-btn" title="朗读 ${escapeHtml(e.hangul)}" aria-label="朗读">▶</button>
           </div>
-          <div class="text-xs text-slate-300 space-y-0.5">
-            ${senses.map(s => `<div>· ${escapeHtml(s)}</div>`).join('')}
+          <div class="text-xs text-slate-300">
+            · ${escapeHtml((e.meaning || '').trim())}
           </div>
           ${tags ? `<div class="mt-1.5">${tags}</div>` : ''}
         </div>
@@ -2611,8 +2642,8 @@ function renderWordsList() {
             </div>
             <button onclick="event.stopPropagation(); playKorean('${escapeHtml(e.hangul)}')" class="tts-btn" title="朗读 ${escapeHtml(e.hangul)}" aria-label="朗读">▶</button>
           </div>
-          <div class="text-xs text-slate-300 space-y-0.5">
-            ${senses.map(s => `<div>· ${escapeHtml(s)}</div>`).join('')}
+          <div class="text-xs text-slate-300">
+            · ${escapeHtml((e.meaning || '').trim())}
           </div>
           ${tags ? `<div class="mt-1.5">${tags}</div>` : ''}
         </div>
@@ -2654,8 +2685,8 @@ function renderWordsList() {
             </div>
             <button onclick="event.stopPropagation(); playKorean('${escapeHtml(e.hangul)}')" class="tts-btn" title="朗读 ${escapeHtml(e.hangul)}" aria-label="朗读">▶</button>
           </div>
-          <div class="text-xs text-slate-300 space-y-0.5">
-            ${senses.map(s => `<div>· ${escapeHtml(s)}</div>`).join('')}
+          <div class="text-xs text-slate-300">
+            · ${escapeHtml((e.meaning || '').trim())}
           </div>
           ${tags ? `<div class="mt-1.5">${tags}</div>` : ''}
         </div>
@@ -2709,7 +2740,8 @@ function renderDetail() {
         <div class="min-w-0">
           <div class="flex items-baseline gap-3 flex-wrap">
             <h2 class="text-5xl font-bold text-white">${escapeHtml(e.hangul)}</h2>
-            ${e.roman ? `<span class="text-base text-slate-400 font-mono">/${escapeHtml(e.roman)}/</span>` : ''}
+            ${(e.hanja || ['汉字词','汉音词','外来语','外来词','混合词','混种词'].includes(e.wordClass)) && e.pron ? `<span class="text-sm text-slate-400">[${escapeHtml(e.pron.replace(/[[\]]/g,''))}]</span>` : ''}
+            ${e.roman ? `<span class="text-base text-slate-400 font-mono">(${escapeHtml(e.roman)})</span>` : ''}
             <button onclick="playKorean('${escapeHtml(e.hangul)}')" class="tts-btn-lg" title="朗读 ${escapeHtml(e.hangul)}" aria-label="朗读">▶</button>
           </div>
           <div class="flex items-center gap-2 mt-2 text-xs text-slate-500 flex-wrap">
@@ -2750,14 +2782,7 @@ function renderDetail() {
       <!-- Meanings -->
       <div class="mb-4">
         <div class="text-xs text-slate-400 uppercase tracking-wider mb-2">释义 Meaning</div>
-        <div class="space-y-1.5">
-          ${senses.map((s, i) => `
-            <div class="flex gap-2 items-start">
-              <span class="text-[#fbbf24] font-bold text-sm min-w-[20px]">${i + 1}.</span>
-              <span class="text-base text-slate-100">${escapeHtml(s)}</span>
-            </div>
-          `).join('') || '<span class="text-slate-500 text-sm italic">（无）</span>'}
-        </div>
+        <div class="text-base text-slate-100">${escapeHtml((e.meaning || '').trim()) || '<span class="text-slate-500 text-sm italic">（无）</span>'}</div>
       </div>
 
       <!-- Decomposition -->
@@ -3305,20 +3330,23 @@ function buildAIEntryPrompt(input, existingTags) {
     ? `\n【现有标签参考（尽量复用，最多挑 1-3 个；如确实没有合适的可新建）】\n${existingTags.slice(0, 80).join('、')}\n`
     : '';
   const tagConstraint = `\n【语义标签强制约束（tags 字段）】
-tags 是**二级语义标签**（具体概念），每个必须能归入下列 20 个一级大类（根）之一：
+tags 必须是「**一级大类 > 二级子类**」格式，每个标签含一条归属路径：
 ${_tagTaxonomyText()}
-- 标签必须落在某大类的**二级子类**上（如上「：」后的示例），不要直接写大类名。
-  例：「米饭」→「主食」（属 饮食·烹饪·食材），不是「饮食」；
-      「筷子」→「餐具」；「跑」→「移动」；「红色」→「颜色」。
-- 禁止填词性/语种/阶称/敬语等语法标签（名词/动词/汉音词/敬语等）——这些有专用字段 pos/wordClass/speechLevel/honorific 等
-- 同一条词条的多个 tags 不能属于同一个大类（如不能同时有「穿刺」和「破坏」，两者都属于「动作·行为·过程」，只留最具体的那个）
-- 1-3 个，优先复用现有标签
+- 格式："一级大类名 > 二级子类名"，例如：
+  · 「米饭」→ "饮食·烹饪·食材 > 主食"
+  · 「筷子」→ "饮食·烹饪·食材 > 餐具"
+  · 「跑」→ "动作·行为·过程 > 移动"
+  · 「红」→ "状态·性质·变化 > 颜色"
+- 一级大类必须是上面 20 个之一（逐字使用其名）；二级子类是具体概念
+- 禁止填词性/语种/阶称/敬语等语法标签——这些有专用字段 pos/wordClass/speechLevel 等
+- 同一条词条的多个 tags 不能属于同一个大类（如不能同时有两个「动作·行为·过程 > ...」，只留最具体的那个）
+- 1-3 个，优先复用现有二级子类名
 `;
 
   return `你是韩语研究者和优秀教学者，是语音语言学、谚文字形、字音字义、词源、词根词缀、汉字词、固有韩语、外来语、历史制度文化方面的专家，并且擅长教学总结、抽象解释、具体举例和结构化展开。
 
 【读者设定】
-读者是韩语小白。所有韩文字符必须注音（方括号 [] 内写实际发音），所有汉字词必须给出汉字。
+读者是韩语小白。所有韩文字符必须给出罗马化注音（圆括号 () 内写拉丁化）；汉字词/外来语另加方括号 [实际发音]（固有韩语不需要）。所有汉字词必须给出汉字。
 
 【输出语言约定】
 所有枚举字段（如 pos/speechLevel/derivation 等）的值必须用**简体中文**（如 动词、名词、使动、肃敬体、高频、有灵、积极 等），**不要**用韩文原词。韩文仅在 hangul、root、examples、hanja 等文本字段中出现。
@@ -3339,7 +3367,7 @@ ${_tagTaxonomyText()}
 【字段说明】
 - hangul: 韩文词条
 - roman: 文化观光部 2000 式拉丁化 (Revised Romanization)，如 찌다→"jjida"，사랑→"sarang"
-- pron: 实际发音，方括号包围，如 [찌다]、[사랑]、[안녕히]
+- pron: 实际发音，方括号包围，如 [사랑]、[안녕히]。**仅汉字词/外来语填写**（hangul 拼写与实际发音有出入时标注音变）；**固有韩语留空 ""**（hangul 本身即谚文注音，无需重复）。
 - meaning: 中文释义；多义项用「；」分隔，每项不超 15 字
 - wordClass: 上述五类之一
 - hanja: 若为汉字词，给出对应汉字（如 사랑→"愛"、산→"山"、불안→"不安"）；否则空字符串 ""
@@ -3532,7 +3560,7 @@ async function runAINewEntry() {
       mimetic:       !!parsed.mimetic,
       humble:        !!parsed.humble,
       honNoun:       !!parsed.honNoun,
-      tags:      Array.isArray(parsed.tags) ? parsed.tags.map(t => String(t).trim()).filter(Boolean).slice(0, 5) : [],
+      tags:      Array.isArray(parsed.tags) ? parsed.tags.map(t => _ingestTag(t)).filter(Boolean).slice(0, 5) : [],
     };
     _aiAddLastEntry = entry;
     _setStatus('✓ AI 分析完成，请确认后应用', 'success');
@@ -3601,9 +3629,12 @@ function renderAIEntryPreview(entry) {
       }).join('')
     : '';
 
-  // 标签
+  // 标签：显示完整「一级大类 > 二级子类 > ...」路径
   const tagsHtml = entry.tags.length > 0
-    ? entry.tags.map(t => `<span class="inline-block text-[10px] px-2 py-0.5 rounded-full bg-[#34d399]/15 text-[#6ee7b7] border border-[#34d399]/30">${escapeHtml(t)}</span>`).join(' ')
+    ? entry.tags.map(t => {
+        const chain = getTagChain(t) || [t];
+        return `<span class="inline-block text-[10px] px-2 py-0.5 rounded-full bg-[#34d399]/15 text-[#6ee7b7] border border-[#34d399]/30">${chain.map(escapeHtml).join(' › ')}</span>`;
+      }).join(' ')
     : `<span class="text-xs text-slate-600 italic">无</span>`;
 
   document.getElementById('ai-add-preview').innerHTML = `
@@ -3612,7 +3643,8 @@ function renderAIEntryPreview(entry) {
       <!-- 词头 -->
       <div class="flex items-baseline gap-2 mb-2 flex-wrap">
         <span class="text-3xl font-bold text-white">${escapeHtml(entry.hangul)}</span>
-        ${entry.roman ? `<span class="text-xs text-slate-500 font-mono">/${escapeHtml(entry.roman)}/</span>` : ''}
+        ${(entry.hanja || ['汉字词','汉音词','外来语','外来词','混合词','混种词'].includes(entry.wordClass)) && entry.pron ? `<span class="text-xs text-slate-400">[${escapeHtml(entry.pron.replace(/[[\]]/g,''))}]</span>` : ''}
+        ${entry.roman ? `<span class="text-xs text-slate-500 font-mono">(${escapeHtml(entry.roman)})</span>` : ''}
       </div>
       <div class="flex items-center gap-1.5 mb-3 flex-wrap">
         ${wcBadge}${hanjaBadge}${posBadge}${lvlBadge}${honBadge}${derivBadge}
@@ -3912,9 +3944,8 @@ function renderTagCloud() {
 
     return `
       <div class="col-span-2 sm:col-span-3 md:col-span-4 lg:col-span-5 rounded-lg border border-[#34d399]/40 bg-[#34d399]/[0.04] px-3 py-2 shadow-[0_0_18px_rgba(52,211,153,0.08)]">
-        <div class="flex items-baseline justify-between mb-1.5 pb-1 border-b border-white/10 gap-2 flex-wrap">
-          <button onclick="toggleTagCloudRoot('${escapeHtml(root).replace(/'/g,"\\'")}', event)"
-                  class="text-sm font-bold ${isSelected ? 'text-[#6ee7b7]' : 'text-white'} hover:text-[#34d399] transition flex items-center gap-1">
+        <div class="flex items-baseline justify-between mb-1.5 pb-1 border-b border-white/10 gap-2 flex-wrap cursor-pointer" onclick="toggleTagCloudRoot('${escapeHtml(root).replace(/'/g,"\\'")}', event)" title="点击收起">
+          <button class="text-sm font-bold ${isSelected ? 'text-[#6ee7b7]' : 'text-white'} hover:text-[#34d399] transition flex items-center gap-1">
             <span class="text-slate-500 text-xs">▾</span>
             <span>${escapeHtml(root)}</span>
             ${aliases.length > 0 ? `<span class="text-[9px] text-[#a78bfa] font-normal">≡${aliases.length}</span>` : ''}
@@ -5345,7 +5376,7 @@ function buildCompletionPrompt(batch) {
     related: '相关词数组（同根/近义/反义，反义加 (反) 前缀）',
     examples: '例句数组，每条 "韩文 — 中文"',
     culturalNote: '历史文化制度背景',
-    tags: '二级语义标签数组（1-3 个，写具体概念，落在二级子类上）。20 个一级大类及示例子类：' + Object.entries(_TAG_SUB_EXAMPLES).map(([r,s])=>r+'('+s.slice(0,3).join('/')+')').join(' / ') + '。例：「米饭」→「主食」；「筷子」→「餐具」；「跑」→「移动」；「红」→「颜色」——不要填大类名。禁止词性/语种/阶称等语法标签；同条目多标签不得同属一大类。',
+    tags: '语义标签数组（1-3 个），格式为「一级大类 > 二级子类」，如「饮食·烹饪·食材 > 餐具」「动作·行为·过程 > 移动」「状态·性质·变化 > 颜色」。一级大类必须是这 20 个之一：' + Object.keys(_TAG_SUB_EXAMPLES).join(' / ') + '。禁止词性/语种/阶称等语法标签；同条目多标签不得同属一大类。',
     wordClass: '词类（固有韩语/汉字词/外来语/混合词/新造词）',
     hanja: '汉字（若为汉字词）',
     pos: '词性 품사（11 类）',
@@ -5890,7 +5921,8 @@ function applyCompletions(batch, results) {
         ? (finalVal === 'true') : finalVal;
       // 应用
       if (Array.isArray(finalVal)) {
-        target[field] = finalVal.slice(0, 12);
+        // tags 数组：摄入并自动建立 tagGraph 父子链
+        target[field] = (field === 'tags' ? finalVal.map(_ingestTag) : finalVal).filter(Boolean).slice(0, 12);
       } else if (typeof finalBool === 'boolean') {
         target[field] = finalBool;
       } else {
