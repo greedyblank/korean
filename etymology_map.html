@@ -2750,9 +2750,9 @@ function renderDetail() {
       <!-- Header（词汇 + 发音 + 词性/词类 + 编辑删除，整行打通） -->
       <div class="mb-3">
         <div class="flex items-baseline gap-2 flex-wrap">
-          <h2 class="text-4xl font-bold text-white">${escapeHtml(e.hangul)}</h2>
-          ${(e.hanja || ['汉字词','汉音词','外来语','外来词','混合词','混种词'].includes(e.wordClass)) && e.pron ? `<span class="text-xs text-slate-400">[${escapeHtml(e.pron.replace(/[[\]]/g,''))}]</span>` : ''}
-          ${e.roman ? `<span class="text-sm text-slate-400 font-mono">(${escapeHtml(e.roman)})</span>` : ''}
+          <h2 class="text-[28px] font-bold text-white">${escapeHtml(e.hangul)}</h2>
+          ${(e.hanja || ['汉字词','汉音词','外来语','外来词','混合词','混种词'].includes(e.wordClass)) && e.pron ? `<span class="text-[12px] text-slate-400">[${escapeHtml(e.pron.replace(/[[\]]/g,''))}]</span>` : ''}
+          ${e.roman ? `<span class="text-[13px] text-slate-400 font-mono">(${escapeHtml(e.roman)})</span>` : ''}
           <button onclick="playKorean('${escapeHtml(e.hangul)}')" class="tts-btn-lg" title="朗读 ${escapeHtml(e.hangul)}" aria-label="朗读">▶</button>
           ${e.pos ? `<span class="inline-block px-1.5 py-0.5 rounded-full text-[10px] ${posBadgeClass(e.pos)}">${escapeHtml(e.pos)}</span>` : ''}
           ${(e.wordClass || e.hanja) ? `<span class="inline-block px-1.5 py-0.5 rounded-full text-[10px] bg-[#a855f7]/15 text-[#d8b4fe] border border-[#a855f7]/30${e.hanja?' font-serif':''}">${e.wordClass ? (e.hanja ? escapeHtml(e.wordClass) + '：' + escapeHtml(e.hanja) : escapeHtml(e.wordClass)) : escapeHtml(e.hanja)}</span>` : ''}
@@ -2783,7 +2783,7 @@ function renderDetail() {
 
       <!-- 音素象征 初/中/终声 -->
       <div class="mb-4">
-        <div class="text-xs text-slate-400 uppercase tracking-wider mb-2">音素象征 · 初声 + 中声 ${e.hangul && decomposeHangul(e.hangul).some(p => p.finIdx > 0) ? '+ 终声' : ''}</div>
+        <div class="text-[10px] text-slate-400 uppercase tracking-wider mb-2">音素象征 · 初声 + 中声 ${e.hangul && decomposeHangul(e.hangul).some(p => p.finIdx > 0) ? '+ 终声' : ''}</div>
         <div class="flex flex-wrap gap-1.5">
           ${phonemePillsHtml(e.hangul)}
         </div>
@@ -2791,45 +2791,45 @@ function renderDetail() {
 
       <!-- Meanings -->
       <div class="mb-4">
-        <div class="text-xs text-slate-400 uppercase tracking-wider mb-2">释义 Meaning</div>
-        <div class="text-base text-[#fde68a]">${escapeHtml((e.meaning || '').trim()) || '<span class="text-slate-500 text-sm italic">（无）</span>'}</div>
+        <div class="text-[10px] text-slate-400 uppercase tracking-wider mb-2">释义 Meaning</div>
+        <div class="text-[13px] text-[#fde68a] leading-relaxed">${escapeHtml((e.meaning || '').trim()) || '<span class="text-slate-500 text-[12px] italic">（无）</span>'}</div>
       </div>
 
       <!-- Decomposition -->
       ${e.decomp ? `
         <div class="mb-4">
-          <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">音素分拆 Decomposition</div>
-          <div class="text-sm text-[#38bdf8] bg-[#38bdf8]/5 px-3 py-2 rounded-lg border border-[#38bdf8]/15">${escapeHtml(e.decomp)}</div>
+          <div class="text-[10px] text-slate-400 uppercase tracking-wider mb-1">音素分拆 Decomposition</div>
+          <div class="text-[13px] text-[#38bdf8] bg-[#38bdf8]/5 px-3 py-2 rounded-lg border border-[#38bdf8]/15">${escapeHtml(e.decomp)}</div>
         </div>
       ` : ''}
 
       <!-- Analysis (造物主矩阵) -->
       ${e.analysis ? `
         <div class="mb-4">
-          <div class="text-xs text-[#d8b4fe] uppercase tracking-wider mb-1">🎯 造物主矩阵分析 Analysis</div>
-          <div class="text-sm text-slate-100 leading-relaxed bg-gradient-to-br from-[#a855f7]/10 to-[#ec4899]/5 px-3 py-2 rounded-lg border border-[#a855f7]/20 whitespace-pre-wrap">${escapeHtml(e.analysis)}</div>
+          <div class="text-[10px] text-[#d8b4fe] uppercase tracking-wider mb-1">🎯 造物主矩阵分析 Analysis</div>
+          <div class="text-[13px] text-slate-100 leading-relaxed bg-gradient-to-br from-[#a855f7]/10 to-[#ec4899]/5 px-3 py-2 rounded-lg border border-[#a855f7]/20 whitespace-pre-wrap">${escapeHtml(e.analysis)}</div>
         </div>
       ` : ''}
 
       <!-- Etymology 词源 -->
       ${e.etymology ? `
         <div class="mb-4">
-          <div class="text-xs text-[#fbbf24] uppercase tracking-wider mb-1">📜 词源追溯 Etymology</div>
-          <div class="text-sm text-slate-200 leading-relaxed bg-[#fbbf24]/[0.04] px-3 py-2 rounded-lg border border-[#fbbf24]/15 whitespace-pre-wrap">${escapeHtml(e.etymology)}</div>
+          <div class="text-[10px] text-[#fbbf24] uppercase tracking-wider mb-1">📜 词源追溯 Etymology</div>
+          <div class="text-[13px] text-slate-200 leading-relaxed bg-[#fbbf24]/[0.04] px-3 py-2 rounded-lg border border-[#fbbf24]/15 whitespace-pre-wrap">${escapeHtml(e.etymology)}</div>
         </div>
       ` : ''}
 
       <!-- Examples 例句 -->
       ${(e.examples || []).length > 0 ? `
         <div class="mb-4">
-          <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">💬 例句 Examples</div>
+          <div class="text-[10px] text-slate-400 uppercase tracking-wider mb-1">💬 例句 Examples</div>
           <div class="space-y-1">
             ${(e.examples || []).map(ex => {
               const parts = ex.split(/\s*[—–\-]\s*/);
               if (parts.length >= 2) {
-                return `<div class="text-sm pl-2 border-l-2 border-[#34d399]/40"><span class="text-slate-100">${escapeHtml(parts[0])}</span> <span class="text-slate-500">—</span> <span class="text-slate-400">${escapeHtml(parts.slice(1).join(' — '))}</span></div>`;
+                return `<div class="text-[13px] pl-2 border-l-2 border-[#34d399]/40"><span class="text-slate-100">${escapeHtml(parts[0])}</span> <span class="text-slate-500">—</span> <span class="text-slate-400">${escapeHtml(parts.slice(1).join(' — '))}</span></div>`;
               }
-              return `<div class="text-sm pl-2 border-l-2 border-[#34d399]/40 text-slate-100">${escapeHtml(ex)}</div>`;
+              return `<div class="text-[13px] pl-2 border-l-2 border-[#34d399]/40 text-slate-100">${escapeHtml(ex)}</div>`;
             }).join('')}
           </div>
         </div>
@@ -2838,7 +2838,7 @@ function renderDetail() {
       <!-- Related 相关词 -->
       ${(e.related || []).length > 0 ? `
         <div class="mb-4">
-          <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">🔗 相关词 Related</div>
+          <div class="text-[10px] text-slate-400 uppercase tracking-wider mb-1">🔗 相关词 Related</div>
           <div class="flex flex-wrap gap-1.5">
             ${(e.related || []).map(t => {
               const isAnti = t.startsWith('(反)');
@@ -2848,7 +2848,7 @@ function renderDetail() {
                 ? 'bg-[#f43f5e]/10 text-[#fda4af] border-[#f43f5e]/30 hover:bg-[#f43f5e]/20'
                 : (lookup ? 'bg-[#34d399]/10 text-[#6ee7b7] border-[#34d399]/30 hover:bg-[#34d399]/20 cursor-pointer' : 'bg-white/5 text-slate-300 border-white/10 hover:bg-white/10');
               const clickAttr = lookup ? `onclick="jumpToHangul('${escapeHtml(txt).replace(/'/g,"\\'")}')"` : '';
-              return `<span ${clickAttr} class="inline-block text-xs px-2 py-0.5 rounded border transition ${cls}">${isAnti ? '反 ' : ''}${escapeHtml(txt)}</span>`;
+              return `<span ${clickAttr} class="inline-block text-[11px] px-2 py-0.5 rounded border transition ${cls}">${isAnti ? '反 ' : ''}${escapeHtml(txt)}</span>`;
             }).join('')}
           </div>
         </div>
@@ -2857,15 +2857,15 @@ function renderDetail() {
       <!-- Cultural Note 历史文化背景 -->
       ${e.culturalNote ? `
         <div class="mb-4">
-          <div class="text-xs text-[#7dd3fc] uppercase tracking-wider mb-1">🏛 历史文化背景</div>
-          <div class="text-sm text-slate-200 leading-relaxed bg-[#38bdf8]/[0.04] px-3 py-2 rounded-lg border border-[#38bdf8]/15 whitespace-pre-wrap">${escapeHtml(e.culturalNote)}</div>
+          <div class="text-[10px] text-[#7dd3fc] uppercase tracking-wider mb-1">🏛 历史文化背景</div>
+          <div class="text-[13px] text-slate-200 leading-relaxed bg-[#38bdf8]/[0.04] px-3 py-2 rounded-lg border border-[#38bdf8]/15 whitespace-pre-wrap">${escapeHtml(e.culturalNote)}</div>
         </div>
       ` : ''}
 
       <!-- Tags -->
       ${tagsHtml ? `
         <div class="mb-4">
-          <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">标签 Tags</div>
+          <div class="text-[10px] text-slate-400 uppercase tracking-wider mb-1">标签 Tags</div>
           <div>${tagsHtml}</div>
         </div>
       ` : ''}
@@ -2873,8 +2873,8 @@ function renderDetail() {
       <!-- Notes -->
       ${e.notes ? `
         <div class="mb-4">
-          <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">📝 私人笔记 Notes</div>
-          <div class="text-sm text-slate-300 italic leading-relaxed bg-[#fbbf24]/[0.04] px-3 py-2 rounded-lg border border-[#fbbf24]/15 whitespace-pre-wrap">${escapeHtml(e.notes)}</div>
+          <div class="text-[10px] text-slate-400 uppercase tracking-wider mb-1">📝 私人笔记 Notes</div>
+          <div class="text-[13px] text-slate-300 italic leading-relaxed bg-[#fbbf24]/[0.04] px-3 py-2 rounded-lg border border-[#fbbf24]/15 whitespace-pre-wrap">${escapeHtml(e.notes)}</div>
         </div>
       ` : ''}
 
