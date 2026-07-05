@@ -1592,6 +1592,37 @@ const _GRAMMAR_POLLUTION_TAGS = new Set([
   '拟声词','拟态词','感叹词',
 ]);
 
+// 标签 → 20 大类根的关键词路由（用于净化时去重）
+const _TAG_ROOT_ROUTER = [
+  ['身体·健康·医疗', /身|体|医|病|痛|头|手|脚|眼|脸|发|健康|医疗|药|症状|生理|呼吸|消化/],
+  ['情感·心理·性格', /情|感|怒|喜|悲|爱|恨|心理|性格|情绪|心态|惊|惧|忧|乐/],
+  ['人物·人际·家庭', /人|亲|家|友|妻|夫|父|母|子|女|哥|姐|弟|妹|人物|关系|家庭|称呼|姓氏/],
+  ['日常生活·起居', /生活|起|居|日常|睡|习惯|家务|清洁|洗/],
+  ['饮食·烹饪·食材', /食|饮|吃|喝|煮|烹饪|料理|味|饭|菜|茶|酒|食材|粮食|饥|渴/],
+  ['服饰·美容·外观', /衣|服|穿|妆|美容|外观|美|饰|鞋|裙|帽|化妆/],
+  ['居住·建筑·家具', /住|屋|房|建|筑|家具|门|窗|桌|椅|床|墙|院/],
+  ['交通·出行·地点', /行|走|车|船|飞|路|街|地点|位置|旅行|移动|交通|骑|驾/],
+  ['时间·季节·历法', /时|日|月|年|春|夏|秋|冬|季节|历|星期|钟|刻|早晚|今明/],
+  ['自然·天文·地理·生物', /天|雨|风|星|山|河|海|地|自然|生物|动植物|气象|云|雪|雷|光|火|水|木|花|草|树|鸟|鱼|虫/],
+  ['教育·学习·知识', /学|教|读|知识|课|考|教育|学习|学校|书|字(归语言?)/],
+  ['工作·职业·经济·商业', /工作|职|业|钱|买|卖|商|经|贸易|办公|薪|工资|公司|雇佣/],
+  ['科学·技术·方法', /科学|技|理|化|方法|术|工程|算/],
+  ['文化·艺术·娱乐·媒体', /文|艺|音|画|舞|戏|电影|娱乐|媒体|新闻|书|报|网络/],
+  ['政治·法律·社会', /政|治|法|律|权|国|社|会|公务|选举|罪|罚/],
+  ['历史·宗教·哲学·传统', /史|宗|神|佛|哲|传统|古|仪式|庙|寺|信仰/],
+  ['语言·文字·思维·逻辑', /语|言|字|词|说|读|写|想|思维|逻辑|语法|音/],
+  ['抽象概念·数量·关系', /数|量|程|度|真|假|对|错|关系|比较|抽象|概念|原因|结果/],
+  ['动作·行为·过程', /动|作|为|行|做|打|破坏|穿刺|碰撞|抓|扔|切|拿|放|送|接/],
+  ['状态·性质·变化', /状态|性质|变|化|好|坏|大|小|颜色|形状|快|慢|高|低|强|弱/],
+];
+function _routeTagToRoot(tag) {
+  if (!tag) return null;
+  for (const [root, re] of _TAG_ROOT_ROUTER) {
+    if (re.test(tag)) return root;
+  }
+  return null;
+}
+
 function _migrateTagPollution(entries, tagGraph) {
   if (localStorage.getItem('korean_tag_cleanup_v1')) return;  // 只跑一次
   let cleaned = 0;
@@ -1628,6 +1659,69 @@ function _migrateTagPollution(entries, tagGraph) {
   } else {
     localStorage.setItem('korean_tag_cleanup_v1', '1');
   }
+}
+
+// v2 净化：强制重跑污染清理 + 同一大类去重（每条词条每个根只留一个最具体的标签）
+function _migrateTagPollutionV2(entries, tagGraph) {
+  if (localStorage.getItem('korean_tag_cleanup_v2')) return;
+  let pollutionRemoved = 0, dupesRemoved = 0;
+
+  entries.forEach(e => {
+    if (!e.tags || !e.tags.length) return;
+
+    // 1) 再次移除语法污染（强制，不依赖 v1 标记）
+    const beforePollution = e.tags.length;
+    e.tags = e.tags.filter(t => {
+      if (_GRAMMAR_POLLUTION_TAGS.has(t) && !t.includes('›')) {
+        // 迁移到专用字段
+        if (['名词','动词','形容词','副词','代词','数词','依存名词','冠形词','感叹词','助词','接缀'].includes(t) && !e.pos) e.pos = t;
+        if (['敬语','尊称'].includes(t) && !e.speechLevel) e.speechLevel = t;
+        if (['书面语','口语','俗语','雅语'].includes(t) && !e.register) e.register = t;
+        return false;
+      }
+      return true;
+    });
+    if (e.tags.length < beforePollution) pollutionRemoved += beforePollution - e.tags.length;
+
+    // 2) 同一大类去重：按 router 把标签分组，每个根只留最具体的一个
+    const byRoot = new Map();  // root -> [tag,...]
+    const noRoot = [];         // 无法归类的标签（保留，不参与去重）
+    e.tags.forEach(t => {
+      const r = _routeTagToRoot(t);
+      if (!r) { noRoot.push(t); return; }
+      if (!byRoot.has(r)) byRoot.set(r, []);
+      byRoot.get(r).push(t);
+    });
+    const kept = [...noRoot];
+    byRoot.forEach((tags, root) => {
+      // 选最具体的：标签名越长越具体；同长取非「泛根关键词」的；都泛则取第一个
+      const GENERIC = new Set(['动作','行为','过程','状态','性质','变化','身体','情感','人物','饮食','自然','时间']);
+      tags.sort((a, b) => {
+        const la = a.length, lb = b.length;
+        if (lb !== la) return lb - la;  // 长的优先
+        const ga = GENERIC.has(a) ? 1 : 0, gb = GENERIC.has(b) ? 1 : 0;
+        return ga - gb;  // 非泛词优先
+      });
+      const kept_tag = tags[0];
+      kept.push(kept_tag);
+      if (tags.length > 1) dupesRemoved += tags.length - 1;
+    });
+    // 去重保序
+    const seen = new Set();
+    e.tags = kept.filter(t => { if (seen.has(t)) return false; seen.add(t); return true; });
+  });
+
+  // tagGraph 同步清理污染标签
+  Object.keys(tagGraph).forEach(t => {
+    if (_GRAMMAR_POLLUTION_TAGS.has(t)) delete tagGraph[t];
+  });
+
+  if (pollutionRemoved > 0 || dupesRemoved > 0) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+    localStorage.setItem(TAGGRAPH_KEY, JSON.stringify(tagGraph));
+    console.log(`[标签净化v2] 移除语法污染 ${pollutionRemoved} 个，去重同类子标签 ${dupesRemoved} 个`);
+  }
+  localStorage.setItem('korean_tag_cleanup_v2', '1');
 }
 
 // 修复ㅇ起首词的词根：ㅇ是无声占位符，词根应为整个音节
@@ -2234,8 +2328,7 @@ function _vowelGroupHeaderHtml(vowelId, count, onClick) {
   const g = VOWEL_GROUPS.find(v => v.id === vowelId);
   if (!g) return '';
   return `<div style="font-size:10px;color:var(--fg-muted);padding:8px 10px 4px;display:flex;align-items:center;gap:5px;border-radius:6px;background:rgba(255,255,255,0.02);margin-bottom:2px;cursor:pointer;" onclick="${onClick}" onmouseover="this.style.background='rgba(255,255,255,0.04)'" onmouseout="this.style.background='rgba(255,255,255,0.02)'">
-    <span class="text-lg font-bold" style="color:#a78bfa;min-width:20px;">${g.char}</span>
-    <span style="font-size:11px;color:var(--fg-dim);">${g.roman}</span>
+    <span class="text-lg font-bold" style="color:#a78bfa;min-width:20px;">${g.char}</span> (${g.roman})
     <span style="font-size:10px;color:var(--fg-dim);">${count} 词根 · ${g.label} · ${g.desc}</span>
   </div>`;
 }
@@ -2251,8 +2344,7 @@ function renderRootsList() {
     const pron = init.roman ? ` (${init.roman})` : '';
     const core = init.core ? ` · ${init.core}` : '';
     return `<div style="font-size:10px;color:var(--fg-muted);padding:8px 10px 4px;display:flex;align-items:center;gap:5px;border-radius:6px;background:rgba(255,255,255,0.02);margin-bottom:2px;cursor:pointer;" onclick="${onClick}" onmouseover="this.style.background='rgba(255,255,255,0.04)'" onmouseout="this.style.background='rgba(255,255,255,0.02)'">
-      <span class="text-lg font-bold" style="color:var(--accent);min-width:20px;">${init.char}</span>
-      <span style="font-size:11px;color:var(--fg-dim);">${init.roman || ''}</span>
+      <span class="text-lg font-bold" style="color:var(--accent);min-width:20px;">${init.char}</span>${pron}
       <span style="font-size:10px;color:var(--fg-dim);">${count} 词根${core}</span>
     </div>`;
   };
@@ -2898,19 +2990,11 @@ function clearSearch() {
   onSearch('');
 }
 function clearAllFilters() {
+  // 清搜：仅清搜索文本，保留初声/词根/标签选中状态和位置
   document.getElementById('search-input').value = '';
   state.filter.search = '';
-  state.filter.initialIdx = null;
-  state.filter.vowel = null;
-  state.filter.root = null;
-  state.highlightRoot = null;
-  state.highlightLayer = null;
-  tagCloudState.selectedTag = null;
   document.getElementById('search-clear').classList.add('hidden');
-  const backBtn = document.getElementById('back-to-all-btn');
-  if (backBtn) backBtn.style.display = 'none';
   render();
-  renderTagCloud();
   scrollToActiveItems();
 }
 function scrollToActiveItems() {
@@ -3189,6 +3273,12 @@ function buildAIEntryPrompt(input, existingTags) {
   const tagHint = existingTags.length > 0
     ? `\n【现有标签参考（尽量复用，最多挑 1-3 个；如确实没有合适的可新建）】\n${existingTags.slice(0, 80).join('、')}\n`
     : '';
+  const tagConstraint = `\n【语义标签强制约束（tags 字段）】
+tags 必须是**语义标签**，且每个标签必须能归入下列 20 大类之一：
+${TAG_TAXONOMY_ROOTS.map((r,i)=>`   ${i+1}. ${r}`).join('\n')}
+- 禁止填词性/语种/阶称/敬语等语法标签（名词/动词/汉音词/敬语等）——这些有专用字段 pos/wordClass/speechLevel/honorific 等
+- 同一条词条的多个 tags 不能属于同一个大类（如不能同时有「动作」和「破坏」，两者都属于「动作·行为·过程」，只留最具体的那个）
+- 1-3 个，优先复用现有标签，描述「含义属于哪个概念领域」\n`;
   return `你是韩语研究者和优秀教学者，是语音语言学、谚文字形、字音字义、词源、词根词缀、汉字词、固有韩语、外来语、历史制度文化方面的专家，并且擅长教学总结、抽象解释、具体举例和结构化展开。
 
 【读者设定】
@@ -3249,7 +3339,7 @@ function buildAIEntryPrompt(input, existingTags) {
 - honNoun: 布尔。是否为敬语名词变体（如 집→댁、이름→성함、나이→연세、말→말씀、밥→진지、사람→분）。与 honorific 是不同维度。
 
 **字段适用性总原则：只填适用字段，不适用的留空/ false。一个名词通常不会有 speechLevel/irregular；一个动词通常不会有 animacy/honNoun。**
-- tags: 1-3 个**语义**标签（禁止填词性/语种/阶称/敬语等语法标签——这些有专用字段 pos/wordClass/speechLevel/honorific/humble/register）。语义标签描述「含义属于哪个概念领域」：身体部位、情感、饮食、自然现象、社会关系、抽象关系、动作行为等。优先复用现有标签。
+${tagConstraint}
 ${tagHint}
 【造物主矩阵参考框架（矩阵可能拆分过细了，实际解读词汇时可能不需要太细）】
 
@@ -4497,9 +4587,33 @@ function _defaultLLMSlot() {
 let llmSettings = {
   primary: _defaultLLMSlot(),
   completion: { ..._defaultLLMSlot(), reusePrimary: true },
+  // 每个 provider 的独立缓存：切换 provider 时保留各自的 apiKey/endpoint/model
+  providerCache: {},
 };
 // Tracks which slot the settings modal is currently editing
 let activeLLMTab = 'primary';
+
+// 把当前表单的配置存入 providerCache[provider]
+function _saveToProviderCache(provider, formVals) {
+  if (!provider) return;
+  llmSettings.providerCache[provider] = {
+    endpoint: formVals.endpoint,
+    model: formVals.model,
+    apiKey: formVals.apiKey,
+    useProxy: formVals.useProxy,
+  };
+}
+// 从 providerCache 读取，没有则用 preset 默认值
+function _loadFromProviderCache(provider) {
+  const cached = llmSettings.providerCache[provider];
+  const preset = PROVIDER_PRESETS[provider] || {};
+  return {
+    endpoint: cached?.endpoint || preset.endpoint || '',
+    model: cached?.model || preset.model || '',
+    apiKey: cached?.apiKey || '',
+    useProxy: cached?.useProxy || false,
+  };
+}
 
 // AI completion state
 let aiState = {
@@ -4534,6 +4648,10 @@ function loadSettings() {
             delete saved[k].provider; delete saved[k].endpoint; delete saved[k].model;
           }
           llmSettings[k] = { ...llmSettings[k], ...(saved[k] || {}) };
+        }
+        // 恢复 provider 缓存
+        if (saved.providerCache && typeof saved.providerCache === 'object') {
+          llmSettings.providerCache = saved.providerCache;
         }
       }
     }
@@ -4628,12 +4746,17 @@ function closeSettingsModal() {
   document.getElementById('settings-modal').classList.add('hidden');
 }
 function onProviderChange() {
-  const p = document.getElementById('set-provider').value;
-  const preset = PROVIDER_PRESETS[p];
-  if (preset) {
-    document.getElementById('set-endpoint').value = preset.endpoint;
-    document.getElementById('set-model').value = preset.model;
-  }
+  const newProvider = document.getElementById('set-provider').value;
+  // 先把当前表单值缓存到「切换前」的 provider（保留用户填的 key 等）
+  _syncFormToSlot(activeLLMTab);
+  const cur = getLLMSlot(activeLLMTab);
+  _saveToProviderCache(cur.provider, cur);
+  // 再从缓存（或 preset）载入新 provider 的配置
+  const loaded = _loadFromProviderCache(newProvider);
+  document.getElementById('set-endpoint').value = loaded.endpoint;
+  document.getElementById('set-model').value = loaded.model;
+  document.getElementById('set-apikey').value = loaded.apiKey;
+  document.getElementById('set-use-proxy').checked = !!loaded.useProxy;
 }
 function toggleKeyVisibility() {
   const inp = document.getElementById('set-apikey');
@@ -4648,6 +4771,9 @@ function toggleKeyVisibility() {
 }
 function saveSettings() {
   _syncFormToSlot(activeLLMTab);
+  // 保存时也刷新当前 provider 的缓存
+  const cur = getLLMSlot(activeLLMTab);
+  _saveToProviderCache(cur.provider, cur);
   saveSettingsToStorage();
   closeSettingsModal();
   toast('LLM 设置已保存', 'success');
@@ -5135,7 +5261,7 @@ function buildCompletionPrompt(batch) {
     related: '相关词数组（同根/近义/反义，反义加 (反) 前缀）',
     examples: '例句数组，每条 "韩文 — 中文"',
     culturalNote: '历史文化制度背景',
-    tags: '标签数组（1-4 个中文）',
+    tags: '语义标签数组（1-3 个中文）。必须能归入 20 大类：身体·健康·医疗 / 情感·心理·性格 / 人物·人际·家庭 / 日常生活·起居 / 饮食·烹饪·食材 / 服饰·美容·外观 / 居住·建筑·家具 / 交通·出行·地点 / 时间·季节·历法 / 自然·天文·地理·生物 / 教育·学习·知识 / 工作·职业·经济·商业 / 科学·技术·方法 / 文化·艺术·娱乐·媒体 / 政治·法律·社会 / 历史·宗教·哲学·传统 / 语言·文字·思维·逻辑 / 抽象概念·数量·关系 / 动作·行为·过程 / 状态·性质·变化。禁止词性/语种/阶称等语法标签；同条目多标签不得同属一大类。',
     wordClass: '词类（固有韩语/汉字词/外来语/混合词/新造词）',
     hanja: '汉字（若为汉字词）',
     pos: '词性 품사（11 类）',
@@ -5951,6 +6077,7 @@ window.addEventListener('scroll', () => {
 // =========================================================================
 load();
 _migrateTagPollution(state.entries, state.tagGraph);  // 一次性清理语义标签中的语法/词类污染
+_migrateTagPollutionV2(state.entries, state.tagGraph);  // v2: 强制重跑 + 同大类去重
 _migrateIeungRoots(state.entries);  // 一次性修复ㅇ起首词的词根（无声占位符→实际音节）
 startCloudSync();   // Gist 多端同步：打开/刷新即拉取 + 切回前台
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
