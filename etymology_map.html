@@ -743,8 +743,8 @@
         <input id="ai-add-input" type="text" placeholder="如：찌다 / 蒸 / 찌르다 / 刺"
                oninput="document.getElementById('ai-add-clear').classList.toggle('hidden', !this.value)"
                onkeydown="if(event.key==='Enter'){event.preventDefault();runAINewEntry();}"
-               class="w-full rounded-lg px-3 py-2 pr-9 text-sm bg-black/30 border border-white/15 text-white placeholder-slate-500 focus:outline-none focus:border-[#a855f7] focus:ring-2 focus:ring-[#a855f7]/30 transition">
-        <button id="ai-add-clear" onclick="document.getElementById('ai-add-input').value='';document.getElementById('ai-add-input').focus();this.classList.add('hidden');" class="hidden absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-slate-400 hover:text-white text-xs transition" title="清除输入">✕</button>
+               class="w-full rounded-lg px-3 py-2 pl-9 text-sm bg-black/30 border border-white/15 text-white placeholder-slate-500 focus:outline-none focus:border-[#a855f7] focus:ring-2 focus:ring-[#a855f7]/30 transition">
+        <button id="ai-add-clear" onclick="document.getElementById('ai-add-input').value='';document.getElementById('ai-add-input').focus();this.classList.add('hidden');" class="hidden absolute left-2 top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-slate-400 hover:text-white text-xs transition" title="清除输入">✕</button>
       </div>
       <button id="ai-add-btn" onclick="runAINewEntry()" class="px-4 py-2 text-sm rounded-lg bg-gradient-to-r from-[#a855f7] to-[#ec4899] hover:opacity-90 text-white font-semibold transition whitespace-nowrap">
         ✨ 分析
