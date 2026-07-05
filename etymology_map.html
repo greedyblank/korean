@@ -2306,9 +2306,9 @@ function renderInitialGrid() {
   // ---- 一组 = 一个行内"色块"（标签 pill + 按钮，整体 flex-wrap 进大流） ----
   const groupChipHtml = (label, color, buttonsHtml) => {
     return `
-      <div class="flex items-center gap-1.5 rounded-lg pl-1.5 pr-2 py-1 border" style="background:${color}14;border-color:${color}33">
-        <span class="text-[11px] font-bold px-1 rounded" style="color:${color};background:${color}1f">${escapeHtml(label)}</span>
-        <div class="flex items-center gap-1">${buttonsHtml}</div>
+      <div class="flex items-center gap-1.5 rounded-lg pl-1.5 pr-2 py-1 border max-w-full" style="background:${color}14;border-color:${color}33">
+        <span class="text-[11px] font-bold px-1 rounded shrink-0 self-start mt-0.5" style="color:${color};background:${color}1f">${escapeHtml(label)}</span>
+        <div class="flex items-center gap-1 flex-wrap min-w-0">${buttonsHtml}</div>
       </div>
     `;
   };
