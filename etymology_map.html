@@ -131,9 +131,9 @@
   .header-collapsed #header-toggle-icon { transform: rotate(180deg); }
   .tag-pill {
     display: inline-block;
-    padding: 2px 8px;
-    border-radius: 10px;
-    font-size: 11px;
+    padding: 1px 6px;
+    border-radius: 8px;
+    font-size: 10px;
     background: rgba(56,189,248,0.15);
     color: #7dd3fc;
     border: 1px solid rgba(56,189,248,0.25);
@@ -265,42 +265,14 @@
       </div>
 
       <div class="flex flex-wrap items-center gap-1.5 justify-end">
-        <button onclick="openAddModal()" class="px-2.5 py-1.5 text-xs rounded-lg bg-[#38bdf8]/20 hover:bg-[#38bdf8]/30 border border-[#38bdf8]/40 text-[#7dd3fc] transition">
-          + 新词条
-        </button>
         <button onclick="openAIAddModal()" class="px-2.5 py-1.5 text-xs rounded-lg bg-gradient-to-r from-[#a855f7]/25 to-[#ec4899]/25 hover:from-[#a855f7]/35 hover:to-[#ec4899]/35 border border-[#a855f7]/40 text-[#d8b4fe] transition" title="输入韩语或中文，AI 自动分析补全 (Shift+A)">
           ✨ AI 新词条
         </button>
-        <button onclick="openPasteModal()" class="px-2.5 py-1.5 text-xs rounded-lg bg-[#f43f5e]/15 hover:bg-[#f43f5e]/25 border border-[#f43f5e]/30 text-[#fda4af] transition">
-          ♨ 粘贴
-        </button>
-        <button onclick="openTagBrowser()" class="px-2.5 py-1.5 text-xs rounded-lg bg-[#34d399]/15 hover:bg-[#34d399]/25 border border-[#34d399]/30 text-[#6ee7b7] transition" title="标签体系浏览器 (Shift+点击词条 pill 也能打开)">
-          🏷 标签
-        </button>
         <button onclick="openAIModal()" id="ai-btn" class="px-2.5 py-1.5 text-xs rounded-lg bg-gradient-to-r from-[#a855f7]/25 to-[#ec4899]/25 hover:from-[#a855f7]/35 hover:to-[#ec4899]/35 border border-[#a855f7]/40 text-[#d8b4fe] transition">
-          ✨ AI
+          ✨ AI 补全
         </button>
-        <button onclick="openSettingsModal()" class="w-8 h-8 flex items-center justify-center text-sm rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-400 hover:text-slate-200 transition" title="LLM 设置">
+        <button onclick="openSettingsModal()" class="w-8 h-8 flex items-center justify-center text-sm rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-400 hover:text-slate-200 transition" title="系统设置（添加/粘贴/标签/同步/导入导出/重置等）">
           ⚙
-        </button>
-        <button onclick="openSyncModal()" class="w-8 h-8 flex items-center justify-center text-sm rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-400 hover:text-slate-200 transition" title="多端同步">
-          ☁️
-        </button>
-        <button onclick="cycleTTSRateBtn()" id="tts-rate-btn" class="px-2 h-8 flex items-center justify-center text-xs rounded-lg bg-[#34d399]/10 hover:bg-[#34d399]/20 border border-[#34d399]/30 text-[#6ee7b7] transition font-mono" title="朗读速度（点击切换）">
-          <span id="tts-rate-label">1×</span>
-        </button>
-        <button onclick="exportJSON()" class="px-2.5 py-1.5 text-xs rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 transition" title="导出 JSON（含标签图）">
-          ↓
-        </button>
-        <label class="px-2.5 py-1.5 text-xs rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 transition cursor-pointer" title="导入 JSON">
-          ↑
-          <input type="file" accept=".json" onchange="importJSON(event)" class="hidden">
-        </label>
-        <button onclick="bindLocalFile()" class="px-2.5 py-1.5 text-xs rounded-lg bg-[#fbbf24]/10 hover:bg-[#fbbf24]/20 border border-[#fbbf24]/30 text-[#fcd34d] transition" title="绑定本地文件，每次修改自动写盘（防止清浏览器数据丢失）">
-          📁 绑定
-        </button>
-        <button onclick="confirmReset()" class="w-8 h-8 flex items-center justify-center text-sm rounded-lg bg-white/5 hover:bg-[#f43f5e]/20 border border-white/10 hover:border-[#f43f5e]/30 text-slate-400 hover:text-[#fda4af] transition" title="重置">
-          ↺
         </button>
       </div>
     </div>
@@ -810,11 +782,27 @@
 <div id="settings-modal" class="hidden fixed inset-0 z-50 modal-backdrop flex items-center justify-center p-4">
   <div class="glass rounded-2xl p-6 max-w-xl w-full">
     <div class="flex items-center justify-between mb-4">
-      <h3 class="text-lg font-bold text-white">⚙️ LLM 设置</h3>
+      <h3 class="text-lg font-bold text-white">⚙️ 系统设置</h3>
       <button onclick="closeSettingsModal()" class="text-slate-400 hover:text-white">✕</button>
     </div>
 
-    <!-- 配置切换 Tab -->
+    <!-- 快捷操作（从导航栏收进来的功能） -->
+    <div class="flex flex-wrap gap-1.5 mb-4 pb-4 border-b border-white/10">
+      <button onclick="closeSettingsModal(); openAddModal()" class="px-2 py-1 text-[10px] rounded-md bg-[#38bdf8]/15 hover:bg-[#38bdf8]/25 border border-[#38bdf8]/30 text-[#7dd3fc] transition" title="手动添加词条">+ 新词条</button>
+      <button onclick="closeSettingsModal(); openPasteModal()" class="px-2 py-1 text-[10px] rounded-md bg-[#f43f5e]/15 hover:bg-[#f43f5e]/25 border border-[#f43f5e]/30 text-[#fda4af] transition">♨ 粘贴</button>
+      <button onclick="closeSettingsModal(); openTagBrowser()" class="px-2 py-1 text-[10px] rounded-md bg-[#34d399]/15 hover:bg-[#34d399]/25 border border-[#34d399]/30 text-[#6ee7b7] transition">🏷 标签浏览器</button>
+      <button onclick="closeSettingsModal(); openSyncModal()" class="px-2 py-1 text-[10px] rounded-md bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 transition">☁️ 多端同步</button>
+      <button onclick="cycleTTSRateBtn()" id="tts-rate-btn" class="px-2 py-1 text-[10px] rounded-md bg-[#34d399]/10 hover:bg-[#34d399]/20 border border-[#34d399]/30 text-[#6ee7b7] transition font-mono" title="朗读速度（点击切换）"><span id="tts-rate-label">1×</span></button>
+      <button onclick="bindLocalFile()" class="px-2 py-1 text-[10px] rounded-md bg-[#fbbf24]/10 hover:bg-[#fbbf24]/20 border border-[#fbbf24]/30 text-[#fcd34d] transition" title="绑定本地文件自动写盘">📁 绑定本地</button>
+      <button onclick="exportJSON()" class="px-2 py-1 text-[10px] rounded-md bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 transition" title="导出 JSON">↓ 导出</button>
+      <label class="px-2 py-1 text-[10px] rounded-md bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 transition cursor-pointer" title="导入 JSON">
+        ↑ 导入
+        <input type="file" accept=".json" onchange="importJSON(event)" class="hidden">
+      </label>
+      <button onclick="closeSettingsModal(); confirmReset()" class="px-2 py-1 text-[10px] rounded-md bg-white/5 hover:bg-[#f43f5e]/20 border border-white/10 hover:border-[#f43f5e]/30 text-slate-400 hover:text-[#fda4af] transition">↺ 重置</button>
+    </div>
+
+    <!-- LLM 配置切换 Tab -->
     <div class="flex gap-1 mb-4 bg-white/5 rounded-lg p-1">
       <button id="tab-btn-primary" onclick="switchLLMTab('primary')"
         class="flex-1 px-3 py-1.5 text-xs rounded-md font-semibold transition">
@@ -2545,6 +2533,12 @@ function renderWordsList() {
     return chain.map(c => `<span class="tag-pill${tagCloudState.selectedTag===c?' selected':''}" onclick="event.stopPropagation();onTagClick('${escapeHtml(c).replace(/'/g,"\\'")}', event)">${escapeHtml(c)}</span>`).join('<span style="color:var(--fg-dim);margin:0 2px;">›</span>');
   }).join(' ');
 
+  // 词性 + 词类徽章（词汇列表卡片用，放词汇+发音之后）
+  const wordBadgesHtml = (e) => [
+    e.pos ? `<span class="text-[9px] px-1 py-0 rounded-full ${posBadgeClass(e.pos)}">${escapeHtml(e.pos)}</span>` : '',
+    (e.wordClass || e.hanja) ? `<span class="text-[9px] px-1 py-0 rounded-full bg-[#a855f7]/15 text-[#d8b4fe] border border-[#a855f7]/30">${e.wordClass ? (e.hanja ? escapeHtml(e.wordClass)+'：'+escapeHtml(e.hanja) : escapeHtml(e.wordClass)) : escapeHtml(e.hanja)}</span>` : '',
+  ].filter(Boolean).join(' ');
+
   // 搜索模式：直接展示搜索命中词条（标题优先级：搜索 > 标签 > 词根 > 初声）
   if (state.filter.search.trim()) {
     const matches = getFilteredBySearch() || [];
@@ -2564,6 +2558,7 @@ function renderWordsList() {
             <div class="flex items-baseline gap-2 min-w-0">
               <span class="text-xl font-bold text-white">${escapeHtml(e.hangul)}</span>
               <span class="text-xs text-slate-500 font-mono">${escapeHtml(e.roman || '')}</span>
+              ${wordBadgesHtml(e)}
             </div>
             <button onclick="event.stopPropagation(); playKorean('${escapeHtml(e.hangul)}')" class="tts-btn" title="朗读 ${escapeHtml(e.hangul)}" aria-label="朗读">▶</button>
           </div>
@@ -2599,6 +2594,7 @@ function renderWordsList() {
             <div class="flex items-baseline gap-2 min-w-0">
               <span class="text-xl font-bold text-white">${escapeHtml(e.hangul)}</span>
               <span class="text-xs text-slate-500 font-mono">${escapeHtml(e.roman || '')}</span>
+              ${wordBadgesHtml(e)}
               ${inheritedFrom ? `<span class="text-[9px] text-[#a78bfa]">${escapeHtml(inheritedFrom)}↗</span>` : ''}
             </div>
             <button onclick="event.stopPropagation(); playKorean('${escapeHtml(e.hangul)}')" class="tts-btn" title="朗读 ${escapeHtml(e.hangul)}" aria-label="朗读">▶</button>
@@ -2639,6 +2635,7 @@ function renderWordsList() {
             <div class="flex items-baseline gap-2 min-w-0">
               <span class="text-xl font-bold text-white">${escapeHtml(e.hangul)}</span>
               <span class="text-xs text-slate-500 font-mono">${escapeHtml(e.roman || '')}</span>
+              ${wordBadgesHtml(e)}
             </div>
             <button onclick="event.stopPropagation(); playKorean('${escapeHtml(e.hangul)}')" class="tts-btn" title="朗读 ${escapeHtml(e.hangul)}" aria-label="朗读">▶</button>
           </div>
@@ -2682,6 +2679,7 @@ function renderWordsList() {
             <div class="flex items-baseline gap-2 min-w-0">
               <span class="text-xl font-bold text-white">${escapeHtml(e.hangul)}</span>
               <span class="text-xs text-slate-500 font-mono">${escapeHtml(e.roman || '')}</span>
+              ${wordBadgesHtml(e)}
             </div>
             <button onclick="event.stopPropagation(); playKorean('${escapeHtml(e.hangul)}')" class="tts-btn" title="朗读 ${escapeHtml(e.hangul)}" aria-label="朗读">▶</button>
           </div>
@@ -2735,39 +2733,36 @@ function renderDetail() {
 
   panel.innerHTML = `
     <div class="fade-in">
-      <!-- Header -->
-      <div class="flex items-start justify-between mb-4 gap-3">
-        <div class="min-w-0">
-          <div class="flex items-baseline gap-3 flex-wrap">
-            <h2 class="text-5xl font-bold text-white">${escapeHtml(e.hangul)}</h2>
-            ${(e.hanja || ['汉字词','汉音词','外来语','外来词','混合词','混种词'].includes(e.wordClass)) && e.pron ? `<span class="text-sm text-slate-400">[${escapeHtml(e.pron.replace(/[[\]]/g,''))}]</span>` : ''}
-            ${e.roman ? `<span class="text-base text-slate-400 font-mono">(${escapeHtml(e.roman)})</span>` : ''}
-            <button onclick="playKorean('${escapeHtml(e.hangul)}')" class="tts-btn-lg" title="朗读 ${escapeHtml(e.hangul)}" aria-label="朗读">▶</button>
-          </div>
-          <div class="flex items-center gap-2 mt-2 text-xs text-slate-500 flex-wrap">
-            <span>词根 <span class="text-[#f43f5e] font-bold">${escapeHtml(e.root || getDefaultRoot(e.hangul))}</span></span>
-            ${e.wordClass ? `<span class="inline-block px-2 py-0.5 rounded-full bg-[#a855f7]/15 text-[#d8b4fe] border border-[#a855f7]/30">${escapeHtml(e.wordClass)}</span>` : ''}
-            ${e.hanja ? `<span class="inline-block px-2 py-0.5 rounded-full bg-[#38bdf8]/15 text-[#7dd3fc] border border-[#38bdf8]/30 font-serif">${escapeHtml(e.hanja)}</span>` : ''}
-            ${e.pos ? `<span class="inline-block px-2 py-0.5 rounded-full ${posBadgeClass(e.pos)}">${escapeHtml(e.pos)}</span>` : ''}
-            ${e.speechLevel ? `<span class="inline-block px-2 py-0.5 rounded-full bg-[#fb7185]/15 text-[#fda4af] border border-[#fb7185]/30">${escapeHtml(e.speechLevel)}</span>` : ''}
-            ${e.honorific ? `<span class="inline-block px-2 py-0.5 rounded-full bg-[#fbbf24]/20 text-[#fde68a] border border-[#fbbf24]/40 font-semibold">敬 -시-</span>` : ''}
-            ${e.humble ? `<span class="inline-block px-2 py-0.5 rounded-full bg-[#fb923c]/15 text-[#fdba74] border border-[#fb923c]/30 font-semibold">谦</span>` : ''}
-            ${e.honNoun ? `<span class="inline-block px-2 py-0.5 rounded-full bg-[#a855f7]/20 text-[#d8b4fe] border border-[#a855f7]/40">敬语名词</span>` : ''}
-            ${e.derivation ? `<span class="inline-block px-2 py-0.5 rounded-full bg-[#fb923c]/15 text-[#fdba74] border border-[#fb923c]/30">${escapeHtml(e.derivation)}${e.baseForm ? ` ← ${escapeHtml(e.baseForm)}` : ''}</span>` : ''}
-            ${e.wordFormation ? `<span class="inline-block px-2 py-0.5 rounded-full bg-white/5 text-slate-300 border border-white/15">${escapeHtml(e.wordFormation)}</span>` : ''}
-            ${e.irregular ? `<span class="inline-block px-2 py-0.5 rounded-full bg-[#ef4444]/15 text-[#fca5a5] border border-[#ef4444]/30" title="불규칙 활용">${escapeHtml(e.irregular)}</span>` : ''}
-            ${e.register ? `<span class="inline-block px-2 py-0.5 rounded-full bg-[#22d3ee]/15 text-[#67e8f9] border border-[#22d3ee]/30">${escapeHtml(e.register)}</span>` : ''}
-            ${e.frequency ? `<span class="inline-block px-2 py-0.5 rounded-full bg-[#10b981]/15 text-[#6ee7b7] border border-[#10b981]/30" title="빈도">${({고:'高频',중:'中频',저:'低频'})[e.frequency] || e.frequency}</span>` : ''}
-            ${e.animacy ? `<span class="inline-block px-2 py-0.5 rounded-full bg-[#facc15]/15 text-[#fef08a] border border-[#facc15]/30">${escapeHtml(e.animacy)}</span>` : ''}
-            ${e.negation && e.negation !== '긍정' ? `<span class="inline-block px-2 py-0.5 rounded-full bg-[#dc2626]/15 text-[#fca5a5] border border-[#dc2626]/30">${escapeHtml(e.negation)}</span>` : ''}
-            ${e.dialect ? `<span class="inline-block px-2 py-0.5 rounded-full bg-[#8b5cf6]/15 text-[#c4b5fd] border border-[#8b5cf6]/30" title="방언">${escapeHtml(e.dialect)}方言</span>` : ''}
-            ${e.polarity ? `<span class="inline-block px-2 py-0.5 rounded-full bg-white/5 text-slate-400 border border-white/10">${escapeHtml(e.polarity)}</span>` : ''}
-            ${e.mimetic ? `<span class="inline-block px-2 py-0.5 rounded-full bg-[#34d399]/20 text-[#6ee7b7] border border-[#34d399]/40 font-semibold" title="의성/의태어">🔊 拟声拟态</span>` : ''}
+      <!-- Header（词汇 + 发音 + 词性/词类 + 编辑删除，整行打通） -->
+      <div class="mb-3">
+        <div class="flex items-baseline gap-2 flex-wrap">
+          <h2 class="text-4xl font-bold text-white">${escapeHtml(e.hangul)}</h2>
+          ${(e.hanja || ['汉字词','汉音词','外来语','外来词','混合词','混种词'].includes(e.wordClass)) && e.pron ? `<span class="text-xs text-slate-400">[${escapeHtml(e.pron.replace(/[[\]]/g,''))}]</span>` : ''}
+          ${e.roman ? `<span class="text-sm text-slate-400 font-mono">(${escapeHtml(e.roman)})</span>` : ''}
+          <button onclick="playKorean('${escapeHtml(e.hangul)}')" class="tts-btn-lg" title="朗读 ${escapeHtml(e.hangul)}" aria-label="朗读">▶</button>
+          ${e.pos ? `<span class="inline-block px-1.5 py-0.5 rounded-full text-[10px] ${posBadgeClass(e.pos)}">${escapeHtml(e.pos)}</span>` : ''}
+          ${(e.wordClass || e.hanja) ? `<span class="inline-block px-1.5 py-0.5 rounded-full text-[10px] bg-[#a855f7]/15 text-[#d8b4fe] border border-[#a855f7]/30${e.hanja?' font-serif':''}">${e.wordClass ? (e.hanja ? escapeHtml(e.wordClass) + '：' + escapeHtml(e.hanja) : escapeHtml(e.wordClass)) : escapeHtml(e.hanja)}</span>` : ''}
+          <div class="flex gap-1 ml-auto shrink-0">
+            <button onclick="editEntry('${e.id}')" class="px-2 py-1 text-[10px] rounded-md bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 transition">✎ 编辑</button>
+            <button onclick="deleteEntry('${e.id}')" class="px-2 py-1 text-[10px] rounded-md bg-[#f43f5e]/10 hover:bg-[#f43f5e]/25 border border-[#f43f5e]/30 text-[#fda4af] transition">✕ 删除</button>
           </div>
         </div>
-        <div class="flex gap-1 shrink-0">
-          <button onclick="editEntry('${e.id}')" class="px-3 py-1.5 text-xs rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 transition">✎ 编辑</button>
-          <button onclick="deleteEntry('${e.id}')" class="px-3 py-1.5 text-xs rounded-lg bg-[#f43f5e]/10 hover:bg-[#f43f5e]/25 border border-[#f43f5e]/30 text-[#fda4af] transition">✕ 删除</button>
+        <div class="flex items-center gap-1.5 mt-1.5 text-[11px] text-slate-500 flex-wrap">
+          <span>词根 <span class="text-[#f43f5e] font-bold">${escapeHtml(e.root || getDefaultRoot(e.hangul))}</span></span>
+          ${e.speechLevel ? `<span class="inline-block px-1.5 py-0.5 rounded-full bg-[#fb7185]/15 text-[#fda4af] border border-[#fb7185]/30">${escapeHtml(e.speechLevel)}</span>` : ''}
+          ${e.honorific ? `<span class="inline-block px-1.5 py-0.5 rounded-full bg-[#fbbf24]/20 text-[#fde68a] border border-[#fbbf24]/40 font-semibold">敬 -시-</span>` : ''}
+          ${e.humble ? `<span class="inline-block px-1.5 py-0.5 rounded-full bg-[#fb923c]/15 text-[#fdba74] border border-[#fb923c]/30 font-semibold">谦</span>` : ''}
+          ${e.honNoun ? `<span class="inline-block px-1.5 py-0.5 rounded-full bg-[#a855f7]/20 text-[#d8b4fe] border border-[#a855f7]/40">敬语名词</span>` : ''}
+          ${e.derivation ? `<span class="inline-block px-1.5 py-0.5 rounded-full bg-[#fb923c]/15 text-[#fdba74] border border-[#fb923c]/30">${escapeHtml(e.derivation)}${e.baseForm ? ` ← ${escapeHtml(e.baseForm)}` : ''}</span>` : ''}
+          ${e.wordFormation ? `<span class="inline-block px-1.5 py-0.5 rounded-full bg-white/5 text-slate-300 border border-white/15">${escapeHtml(e.wordFormation)}</span>` : ''}
+          ${e.irregular ? `<span class="inline-block px-1.5 py-0.5 rounded-full bg-[#ef4444]/15 text-[#fca5a5] border border-[#ef4444]/30" title="불규칙 활용">${escapeHtml(e.irregular)}</span>` : ''}
+          ${e.register ? `<span class="inline-block px-1.5 py-0.5 rounded-full bg-[#22d3ee]/15 text-[#67e8f9] border border-[#22d3ee]/30">${escapeHtml(e.register)}</span>` : ''}
+          ${e.frequency ? `<span class="inline-block px-1.5 py-0.5 rounded-full bg-[#10b981]/15 text-[#6ee7b7] border border-[#10b981]/30" title="빈도">${({고:'高频',중:'中频',저:'低频'})[e.frequency] || e.frequency}</span>` : ''}
+          ${e.animacy ? `<span class="inline-block px-1.5 py-0.5 rounded-full bg-[#facc15]/15 text-[#fef08a] border border-[#facc15]/30">${escapeHtml(e.animacy)}</span>` : ''}
+          ${e.negation && e.negation !== '긍정' ? `<span class="inline-block px-1.5 py-0.5 rounded-full bg-[#dc2626]/15 text-[#fca5a5] border border-[#dc2626]/30">${escapeHtml(e.negation)}</span>` : ''}
+          ${e.dialect ? `<span class="inline-block px-1.5 py-0.5 rounded-full bg-[#8b5cf6]/15 text-[#c4b5fd] border border-[#8b5cf6]/30" title="방언">${escapeHtml(e.dialect)}方言</span>` : ''}
+          ${e.polarity ? `<span class="inline-block px-1.5 py-0.5 rounded-full bg-white/5 text-slate-400 border border-white/10">${escapeHtml(e.polarity)}</span>` : ''}
+          ${e.mimetic ? `<span class="inline-block px-1.5 py-0.5 rounded-full bg-[#34d399]/20 text-[#6ee7b7] border border-[#34d399]/40 font-semibold" title="의성/의태어">🔊 拟声拟态</span>` : ''}
         </div>
       </div>
 
@@ -2782,7 +2777,7 @@ function renderDetail() {
       <!-- Meanings -->
       <div class="mb-4">
         <div class="text-xs text-slate-400 uppercase tracking-wider mb-2">释义 Meaning</div>
-        <div class="text-base text-slate-100">${escapeHtml((e.meaning || '').trim()) || '<span class="text-slate-500 text-sm italic">（无）</span>'}</div>
+        <div class="text-base text-[#fde68a]">${escapeHtml((e.meaning || '').trim()) || '<span class="text-slate-500 text-sm italic">（无）</span>'}</div>
       </div>
 
       <!-- Decomposition -->
