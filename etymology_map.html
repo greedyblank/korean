@@ -5170,6 +5170,7 @@ const COMPLETION_FIELD_META = {
   examples:    { label: '例句',       group: '内容', type: 'array' },
   culturalNote:{ label: '文化背景',   group: '内容', type: 'longtext' },
   tags:        { label: '标签',       group: '内容', type: 'array' },
+  emoji:       { label: '💭 释义emoji', group: '内容', type: 'emoji' },
   // 词源/分类
   wordClass:   { label: '词类',       group: '分类', type: 'enum' },
   hanja:       { label: '汉字',       group: '分类', type: 'string' },
@@ -5213,12 +5214,26 @@ function saveCompletionConfig() {
 }
 
 function isFieldEmpty(entry, field) {
+  // emoji 是修饰字段：meaning 没有 emoji 前缀 = 空
+  if (field === 'emoji') return !_startsWithEmoji(entry.meaning || '');
   const v = entry[field];
   if (v == null) return true;
   if (typeof v === 'string') return v.trim() === '';
   if (Array.isArray(v)) return v.length === 0;
   if (typeof v === 'boolean') return v === false; // false 是布尔字段的「空」状态
   return false;
+}
+
+// 判断字符串是否以 emoji 开头（用于 emoji 补全跳过已有 emoji 的释义）
+function _startsWithEmoji(s) {
+  if (!s) return false;
+  const t = s.trim();
+  if (!t) return false;
+  // Extended_Pictographic 覆盖大多数 emoji；额外补几个常见区段
+  if (typeof RegExp.prototype.unicode !== 'undefined') {
+    try { if (/^\p{Extended_Pictographic}/u.test(t)) return true; } catch (e) {}
+  }
+  return /^[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{1F1E6}-\u{1F1FF}\u{2190}-\u{21FF}\u{2B00}-\u{2BFF}\u{FE0F}]/u.test(t);
 }
 
 function renderCompletionFieldPicker() {
@@ -5429,6 +5444,7 @@ function buildCompletionPrompt(batch) {
     dialect: '方言（标准语空 / 朝鲜/济州/庆尚/全罗/咸镜/平安）',
     polarity: '极性（积极/消极/中性）',
     mimetic: '布尔：是否为拟声拟态词',
+    emoji: '1-3 个 emoji（体现核心语义 + 尽量呼应词根音素的物理动作）。仅输出 emoji 本身，不要文字、不要空格、不要解释。例：💧 / 👄🌶️🪡 / ♨️🔥 / 🏃💨',
   };
   const fieldList = fields.map(f => `- ${f}: ${fieldDesc[f] || ''}`).join('\n');
 
@@ -5935,6 +5951,16 @@ function applyCompletions(batch, results) {
     let changed = false;
     for (const field of cfg.fields) {
       const newVal = r[field];
+      // emoji 是修饰字段：在释义前插入 emoji，不改原释义；已有 emoji 则跳过
+      if (field === 'emoji') {
+        const emojiVal = String(newVal || '').trim().replace(/\s+/g, '');
+        if (!emojiVal) continue;
+        const cur = target.meaning || '';
+        if (_startsWithEmoji(cur)) continue;  // 已有 emoji，不再插入
+        target.meaning = emojiVal + cur;
+        changed = true;
+        continue;
+      }
       // 跳过 AI 没返回的字段
       if (newVal == null) continue;
       // 数组/字符串空也跳过
